@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ตรวจคำของบ FF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@600;700&display=swap">
+<style>
+/* Layout: official review sheet — header band with unit details, tabbed workspace, results read top-down as the 4 checks, letter on its own tab */
+:root{
+  --paper:#f3f6f9; --sheet:#ffffff; --ink:#17222e; --muted:#5a6878; --line:#d8dfe7;
+  --accent:#1f4e8c; --accent-soft:#e7eef8;
+  --ok:#1d7548; --ok-soft:#e3f3ea; --warn:#9a6200; --warn-soft:#fbf1dc; --bad:#b3261e; --bad-soft:#fbe6e4;
+  --f-display:"Noto Serif Thai","Tahoma",serif;
+  --f-body:"IBM Plex Sans Thai","Tahoma","Leelawadee UI",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"Consolas",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0f151c; --sheet:#16202a; --ink:#e3e9ef; --muted:#97a5b4; --line:#2b3745;
+  --accent:#86aee6; --accent-soft:#1c2c42;
+  --ok:#62c795; --ok-soft:#163327; --warn:#e5b154; --warn-soft:#3a2d12; --bad:#f2877c; --bad-soft:#3d1d1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0f151c; --sheet:#16202a; --ink:#e3e9ef; --muted:#97a5b4; --line:#2b3745;
+  --accent:#86aee6; --accent-soft:#1c2c42;
+  --ok:#62c795; --ok-soft:#163327; --warn:#e5b154; --warn-soft:#3a2d12; --bad:#f2877c; --bad-soft:#3d1d1a; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.35}
+h1{font-size:1.6rem}
+h2{font-size:1.2rem}
+h3{font-size:1rem;font-family:var(--f-body);font-weight:600}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.muted{color:var(--muted)}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+header.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:12px}
+header.top p{margin:4px 0 0;max-width:62ch}
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:18px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.grid > *{min-width:0}
+label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted);font-weight:500}
+input,textarea,select{font:inherit;font-size:.92rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:7px 9px;width:100%}
+textarea{resize:vertical;min-height:64px}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input.num{text-align:right}
+.span2{grid-column:1/-1}
+button{font:inherit;font-size:.9rem;font-weight:600;cursor:pointer;border-radius:4px;padding:8px 14px;border:1px solid var(--accent);background:var(--accent);color:var(--sheet)}
+button.ghost{background:transparent;color:var(--accent)}
+button.danger{background:transparent;color:var(--bad);border-color:var(--bad)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{background:transparent;color:var(--muted);border:0;border-bottom:3px solid transparent;border-radius:0;padding:10px 14px;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabbadge{display:inline-block;min-width:1.6em;padding:0 6px;margin-left:6px;border-radius:9px;background:var(--bad);color:var(--sheet);font-size:.75rem;font-family:var(--f-num)}
+
+.proj{background:var(--sheet);border:1px solid var(--line);border-radius:6px}
+.proj > summary{list-style:none;cursor:pointer;padding:12px 16px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.proj > summary::-webkit-details-marker{display:none}
+.proj > summary .pid{font-family:var(--f-num);font-size:.8rem;color:var(--muted)}
+.proj > summary .ptitle{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj[open] > summary{border-bottom:1px solid var(--line)}
+.proj .body{padding:16px;display:flex;flex-direction:column;gap:14px}
+.budgetgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.sumline{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--accent-soft);border-radius:4px;font-size:.9rem}
+
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:.78rem;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.info{background:var(--accent-soft);color:var(--accent)}
+
+.stats{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.stat{border-left:3px solid var(--line);padding:4px 12px}
+.stat b{display:block;font-family:var(--f-num);font-size:1.35rem;font-weight:500}
+.stat.bad{border-left-color:var(--bad)} .stat.warn{border-left-color:var(--warn)} .stat.ok{border-left-color:var(--ok)}
+.stat span{font-size:.82rem;color:var(--muted)}
+
+.check{display:flex;flex-direction:column;gap:12px}
+.check > header{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between}
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:.78rem;color:var(--muted);font-weight:600;background:var(--paper);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+.meter{position:relative;height:8px;background:var(--paper);border:1px solid var(--line);border-radius:4px;min-width:110px}
+.meter i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--ok)}
+.meter i.bad{background:var(--bad)}
+.meter s{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+.findings{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.findings li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:var(--sheet)}
+.findings li > div{min-width:0}
+.findings .meta{font-size:.82rem;color:var(--muted)}
+.empty{padding:10px 12px;color:var(--ok);background:var(--ok-soft);border-radius:4px;font-size:.9rem}
+
+#letter{min-height:520px;font-family:var(--f-body);font-size:.95rem;line-height:1.75;background:var(--sheet)}
+.note{font-size:.84rem;color:var(--muted);max-width:75ch}
+.spec h3{margin-top:6px}
+.spec p,.spec li{max-width:78ch}
+.spec code{font-family:var(--f-num);font-size:.85em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--sheet);padding:8px 16px;border-radius:4px;font-size:.9rem}
+@media (max-width:520px){.proj > summary{grid-template-columns:1fr auto}.proj > summary .pid{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head><body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Fundamental Fund · คำขอผ่านระบบ NRIIS</div>
+      <h1>ตรวจคำของบประมาณ FF</h1>
+      <p class="muted">กรอกหรือนำเข้าข้อมูลคำขอของหน่วยงาน ระบบจะตรวจ 4 ด้านทันที และร่างข้อสังเกตแจ้งหน่วยงานให้อัตโนมัติ</p>
+    </div>
+    <div class="row">
+      <button class="ghost" id="btn-sample" type="button">โหลดข้อมูลตัวอย่าง</button>
+      <button class="danger" id="btn-clear" type="button">ล้างข้อมูล</button>
+    </div>
+  </header>
+
+  <section class="sheet grid" aria-label="ข้อมูลหน่วยงาน">
+    <label>ชื่อหน่วยงาน<input id="u-name"></label>
+    <label>ปีงบประมาณ (พ.ศ.)<input id="u-fy" class="num" inputmode="numeric"></label>
+    <label>กำหนดส่งคำขอฉบับปรับปรุง<input id="u-deadline" placeholder="เช่น 30 ตุลาคม 2569"></label>
+    <label class="span2">พันธกิจ / จุดเน้นของหน่วยงาน (คำสำคัญ คั่นด้วยจุลภาค)<input id="u-mission"></label>
+    <label class="span2">ชื่อโครงการที่เคยได้รับทุน / โครงการปีก่อน (บรรทัดละ 1 โครงการ ใช้ตรวจความซ้ำซ้อน)<textarea id="u-prior" rows="3"></textarea></label>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-input" aria-selected="true" data-panel="p-input" type="button">ข้อมูลคำขอ</button>
+    <button role="tab" id="tab-result" aria-selected="false" data-panel="p-result" type="button">ผลการตรวจ<span class="tabbadge" id="badge" hidden></span></button>
+    <button role="tab" id="tab-letter" aria-selected="false" data-panel="p-letter" type="button">ร่างข้อสังเกต</button>
+    <button role="tab" id="tab-spec" aria-selected="false" data-panel="p-spec" type="button">ตรรกะการตรวจ</button>
+  </nav>
+
+  <!-- INPUT -->
+  <section id="p-input" class="check">
+    <div class="row" style="justify-content:space-between">
+      <h2>โครงการในคำขอ <span class="muted num" id="proj-count"></span></h2>
+      <div class="row">
+        <button class="ghost" id="btn-import-toggle" type="button">นำเข้าจาก CSV</button>
+        <button id="btn-add" type="button">+ เพิ่มโครงการ</button>
+      </div>
+    </div>
+    <div class="sheet check" id="import-box" hidden>
+      <p class="note">วางข้อมูล CSV ที่ส่งออกจาก NRIIS (หรือคัดลอกจาก Excel แล้วบันทึกเป็น CSV) โดยแถวแรกเป็นหัวตาราง เรียงคอลัมน์ตามแม่แบบนี้ ตัวเลขใส่หน่วยเป็นบาท</p>
+      <div class="tablebox"><code class="num" id="csv-template" style="display:block;padding:8px 10px;white-space:nowrap;font-size:.8rem"></code></div>
+      <label>ข้อมูล CSV<textarea id="csv-input" rows="6"></textarea></label>
+      <div class="row">
+        <button id="btn-import" type="button">นำเข้า (แทนที่รายการเดิม)</button>
+        <button class="ghost" id="btn-copy-template" type="button">คัดลอกหัวตาราง</button>
+        <span class="note" id="import-msg"></span>
+      </div>
+    </div>
+    <div id="proj-list" class="check"></div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="p-result" class="check" hidden>
+    <div class="sheet stats" id="stats"></div>
+    <div class="sheet check">
+      <header><h2>3 · สัดส่วนงบประมาณตามเกณฑ์ กสว.</h2><span id="rule-chip"></span></header>
+      <p class="note">คิดจากงบเสนอขอรวมของหน่วยงาน <span class="num" id="rule-total"></span> บาท · "ต้องลดอย่างน้อย" คำนวณโดยคิดว่ายอดที่ลดออกจากหมวดนั้นทำให้งบรวมลดลงด้วย</p>
+      <div class="tablebox"><table id="rule-table"></table></div>
+    </div>
+    <div class="sheet check">
+      <header><h2>1 · เป็นโครงการวิจัยและพัฒนานวัตกรรมตามพันธกิจ</h2><span id="mission-chip"></span></header>
+      <div class="tablebox"><table id="mission-table"></table></div>
+      <p class="note">ผลนี้เป็นการคัดกรองเบื้องต้นจากคำในชื่อ วัตถุประสงค์ และผลผลิต ผู้ตรวจควรอ่านยืนยันรายการที่ขึ้นสถานะ "ควรทบทวน" หรือ "ไม่ผ่าน" ก่อนแจ้งหน่วยงาน</p>
+    </div>
+    <div class="sheet check">
+      <header><h2>2 · ความซ้ำซ้อนของโครงการ</h2><span id="dup-chip"></span></header>
+      <ul class="findings" id="dup-list"></ul>
+    </div>
+    <div class="sheet check">
+      <header><h2>4 · ความครบถ้วนและถูกต้องของข้อมูล</h2><span id="comp-chip"></span></header>
+      <ul class="findings" id="comp-list"></ul>
+    </div>
+  </section>
+
+  <!-- LETTER -->
+  <section id="p-letter" class="check" hidden>
+    <div class="row" style="justify-content:space-between">
+      <h2>ร่างข้อสังเกตถึงหน่วยงาน</h2>
+      <div class="row">
+        <button class="ghost" id="btn-regen" type="button">สร้างร่างใหม่จากผลตรวจล่าสุด</button>
+        <button id="btn-copy" type="button">คัดลอกข้อความ</button>
+      </div>
+    </div>
+    <p class="note">แก้ไขข้อความในกล่องได้โดยตรง หากแก้ข้อมูลคำขอภายหลัง กด "สร้างร่างใหม่" เพื่อดึงผลตรวจล่าสุด (ข้อความที่แก้เองจะถูกแทนที่)</p>
+    <textarea id="letter" aria-label="ร่างข้อสังเกต"></textarea>
+  </section>
+
+  <!-- SPEC -->
+  <section id="p-spec" class="sheet spec check" hidden>
+    <h2>ตรรกะการตรวจและการนำไปพัฒนาในระบบจริง</h2>
+    <h3>ขั้นตอนการทำงาน</h3>
+    <ol>
+      <li>ดึงคำขอจาก NRIIS (ส่งออก CSV หรือเชื่อม API) แยกตามหน่วยงาน</li>
+      <li>ตรวจอัตโนมัติ 4 ด้าน แล้วจัดระดับ <span class="chip bad">ไม่ผ่าน</span> <span class="chip warn">ควรทบทวน</span> <span class="chip ok">ผ่าน</span></li>
+      <li>เจ้าหน้าที่ยืนยันรายการที่ระบบตั้งข้อสงสัย (ด้าน 1 และ 2 ต้องใช้ดุลยพินิจ ด้าน 3 และ 4 เป็นกฎตายตัว)</li>
+      <li>ออกร่างข้อสังเกต → ส่งหน่วยงานปรับในระบบ → ดึงข้อมูลชุดใหม่มาตรวจซ้ำจนผ่าน</li>
+    </ol>
+    <h3>ด้าน 1 · งานวิจัยตามพันธกิจ</h3>
+    <p>นับคำบ่งชี้งานวิจัย (เช่น วิจัย พัฒนา นวัตกรรม ต้นแบบ ทดลอง สังเคราะห์ แบบจำลอง) และคำบ่งชี้งานที่ไม่ใช่วิจัย (เช่น อบรม สัมมนา ก่อสร้าง ปรับปรุงอาคาร จัดซื้อ จ้างเหมา บริการวิชาการ) ในชื่อ วัตถุประสงค์ และผลผลิต แล้วจับคู่กับคำสำคัญพันธกิจของหน่วยงาน</p>
+    <ul>
+      <li><b>ไม่ผ่าน</b> พบคำบ่งชี้งานไม่ใช่วิจัย และคำบ่งชี้งานวิจัยน้อยกว่า 2 คำ</li>
+      <li><b>ควรทบทวน</b> ไม่พบคำพันธกิจ หรือไม่พบคำบ่งชี้งานวิจัย หรือพบคำไม่ใช่วิจัยปนอยู่</li>
+      <li>โครงการชื่อ "เสริมสร้างความเข้มแข็ง" จัดเป็นงบประเภทพิเศษ ไม่ตัดสินด้วยเกณฑ์นี้</li>
+    </ul>
+    <p>ในระบบจริงควรเสริมด้วยการจัดกลุ่มตามรหัสสาขา OECD และ Objective/Platform ที่หน่วยงานเลือกใน NRIIS เทียบกับแผนด้าน ววน. ของหน่วยงาน</p>
+    <h3>ด้าน 2 · ความซ้ำซ้อน</h3>
+    <p>เทียบโครงการทุกคู่ในคำขอ และเทียบกับรายชื่อโครงการปีก่อน ด้วยค่าความคล้ายของตัวอักษรต่อเนื่อง 3 ตัว (character trigram, Dice coefficient) ซึ่งใช้ได้กับภาษาไทยที่ไม่เว้นวรรคคำ ตัดคำทั่วไป เช่น "โครงการ" "การพัฒนา" "เพื่อ" ออกก่อนเทียบ</p>
+    <ul>
+      <li><b>ซ้ำซ้อนสูง</b> ค่าความคล้าย ≥ 0.60 · <b>ควรตรวจสอบ</b> 0.45–0.59</li>
+      <li>เตือนเพิ่มเมื่อหัวหน้าโครงการคนเดียวกันอยู่ในคู่ที่คล้ายกัน หรือเป็นหัวหน้ามากกว่า 3 โครงการ</li>
+    </ul>
+    <p>ในระบบจริงควรเทียบข้ามหน่วยงานและข้ามแหล่งทุน (PMU, ฐาน NRIIS ย้อนหลัง) ด้วย text embedding ภาษาไทย และใช้ trigram เป็นตัวกรองชั้นแรก</p>
+    <h3>ด้าน 3 · สัดส่วนงบประมาณ</h3>
+    <p>รวมงบแต่ละหมวดจากทุกโครงการ เทียบกับงบเสนอขอรวมของหน่วยงาน (T)</p>
+    <ul>
+      <li>ค่าจ้าง ≤ 30% · ค่าสาธารณูปโภค ≤ 1% · ค่าซ่อมแซม/สอบเทียบ ≤ 10% · ค่าครุภัณฑ์ ≤ 20% · ซ่อมแซม/สอบเทียบ + ครุภัณฑ์ ≤ 20%</li>
+      <li>ค่าเดินทางต่างประเทศ: T &lt; 25 ลบ. ≤ 5% · 25–150 ลบ. ≤ 4% · &gt; 150 ลบ. ≤ 3% และ ≤ 20 ลบ.</li>
+      <li>งบเสริมสร้างความเข้มแข็งฯ ≤ 5% และ ≤ 5 ลบ.</li>
+    </ul>
+    <p>ยอดที่ต้องลดขั้นต่ำ r ของหมวดที่มียอด A และเพดานร้อยละ p คือ <code>r = (A − pT) / (1 − p)</code> เพราะเมื่อลดหมวดนั้น งบรวมก็ลดลงด้วย ถ้ามีเพดานเป็นจำนวนเงิน C ด้วย ใช้ค่าที่มากกว่าระหว่าง r กับ <code>A − C</code> ส่วนกรณี 25 ลบ. พอดี ถือเป็นช่วง 25–150 ลบ.</p>
+    <h3>ด้าน 4 · ความครบถ้วนและถูกต้อง</h3>
+    <ul>
+      <li>ช่องบังคับว่าง: ชื่อ หัวหน้าโครงการ แผนงาน วัตถุประสงค์ ผลผลิต/ตัวชี้วัด TRL ระยะเวลา</li>
+      <li>งบรวมที่กรอกไม่เท่ากับผลรวมรายหมวด · งบรวมเป็นศูนย์</li>
+      <li>TRL ไม่อยู่ในช่วง 1–9 หรือ TRL เป้าหมายต่ำกว่า TRL เริ่มต้น · ระยะเวลาไม่อยู่ในช่วง 1–60 เดือน</li>
+      <li>วัตถุประสงค์สั้นกว่า 40 ตัวอักษร · ชื่อโครงการซ้ำกันทุกตัวอักษร</li>
+    </ul>
+    <p class="note">ข้อมูลที่กรอกในหน้านี้เก็บไว้ในเบราว์เซอร์ของผู้ใช้แต่ละคนเท่านั้น ไม่ส่งออกไปที่ใด</p>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const CATS=[['wage','ค่าจ้าง'],['util','ค่าสาธารณูปโภค'],['repair','ค่าซ่อมแซมครุภัณฑ์/สอบเทียบ'],['equip','ค่าครุภัณฑ์'],['foreign','ค่าเดินทางต่างประเทศ'],['strength','งบเสริมสร้างความเข้มแข็งฯ'],['other','ค่าใช้จ่ายอื่น']];
+const TEXTF=[['title','ชื่อโครงการ'],['lead','หัวหน้าโครงการ'],['plan','แผนงาน / ยุทธศาสตร์ที่สอดคล้อง'],['objective','วัตถุประสงค์'],['output','ผลผลิต / ตัวชี้วัด']];
+const NUMF=[['trlStart','TRL เริ่มต้น'],['trlEnd','TRL เป้าหมาย'],['months','ระยะเวลา (เดือน)'],['declared','งบรวมที่กรอกในระบบ (บาท)']];
+const CSV_HEAD=['รหัส','ชื่อโครงการ','หัวหน้าโครงการ','แผนงาน/ยุทธศาสตร์','วัตถุประสงค์','ผลผลิต/ตัวชี้วัด','TRL เริ่มต้น','TRL เป้าหมาย','ระยะเวลา(เดือน)','งบรวมที่กรอก',...CATS.map(c=>c[1])];
+const RD=['วิจัย','พัฒนา','นวัตกรรม','ต้นแบบ','ทดลอง','สังเคราะห์','วิเคราะห์','ทดสอบ','ออกแบบ','องค์ความรู้','กลไก','แบบจำลอง','เทคโนโลยี','สิทธิบัตร','ตีพิมพ์','trl','ขยายผล'];
+const NON=['อบรม','สัมมนา','ประชุม','จัดงาน','ศึกษาดูงาน','ก่อสร้าง','ปรับปรุงอาคาร','ปรับปรุงห้อง','จัดซื้อ','จ้างเหมา','บริการวิชาการ','งานประจำ','ประชาสัมพันธ์','ค่ายวิชาการ'];
+const STOP=['โครงการ','การพัฒนา','การศึกษา','สำหรับ','เพื่อ'];
+const KEY='ff-checker-v1';
+const M=1e6;
+
+function sample(){return{
+  unit:{name:'มหาวิทยาลัยตัวอย่าง (ข้อมูลสมมติ)',fy:'2571',deadline:'30 ตุลาคม 2569',
+    mission:'วัสดุศาสตร์, สิ่งแวดล้อม, น้ำเสีย, ฝุ่น, PM2.5, เกษตร, ข้าว, ภาคเหนือ, นาโน',
+    prior:'การพัฒนาระบบเตือนภัยฝุ่น PM2.5 ด้วยเซนเซอร์ต้นทุนต่ำในจังหวัดเชียงใหม่ (FF2570)\nการปรับปรุงพันธุ์ข้าวเหนียวพื้นเมืองให้ทนน้ำท่วม (FF2569)'},
+  projects:[
+    {id:'FF71-001',title:'การพัฒนาวัสดุนาโนจากเปลือกทุเรียนสำหรับดูดซับโลหะหนักในน้ำเสีย',lead:'ผศ.ดร.สมชาย ใจดี',plan:'แผนงานสิ่งแวดล้อมและเศรษฐกิจหมุนเวียน',objective:'เพื่อสังเคราะห์และวิเคราะห์สมบัติวัสดุนาโนคาร์บอนจากเปลือกทุเรียน และทดสอบประสิทธิภาพการดูดซับตะกั่วและแคดเมียมในน้ำเสียจำลอง',output:'ต้นแบบวัสดุดูดซับระดับห้องปฏิบัติการ 1 ชิ้น บทความวิชาการ Q2 1 เรื่อง',trlStart:'2',trlEnd:'4',months:'12',declared:'7950000',b:{wage:1800000,util:50000,repair:200000,equip:2500000,foreign:400000,strength:0,other:3000000}},
+    {id:'FF71-002',title:'การพัฒนาวัสดุนาโนคาร์บอนจากเปลือกทุเรียนเพื่อดูดซับโลหะหนักในน้ำเสียอุตสาหกรรม',lead:'ผศ.ดร.สมชาย ใจดี',plan:'แผนงานสิ่งแวดล้อมและเศรษฐกิจหมุนเวียน',objective:'เพื่อพัฒนาวัสดุนาโนคาร์บอนจากเปลือกทุเรียนและทดสอบการดูดซับโลหะหนักในน้ำเสียจากโรงงานอุตสาหกรรม',output:'ต้นแบบวัสดุดูดซับ 1 ชิ้น อนุสิทธิบัตร 1 ฉบับ',trlStart:'3',trlEnd:'5',months:'12',declared:'6750000',b:{wage:1600000,util:50000,repair:100000,equip:2000000,foreign:500000,strength:0,other:2500000}},
+    {id:'FF71-003',title:'ระบบเตือนภัยฝุ่น PM2.5 ด้วยเซนเซอร์ต้นทุนต่ำและการเรียนรู้ของเครื่องในภาคเหนือ',lead:'ดร.วิภา คำแสง',plan:'แผนงานคุณภาพอากาศและสุขภาพ',objective:'เพื่อพัฒนาแบบจำลองการเรียนรู้ของเครื่องพยากรณ์ค่าฝุ่น PM2.5 ล่วงหน้า 72 ชั่วโมง จากเครือข่ายเซนเซอร์ต้นทุนต่ำ และทดสอบความแม่นยำเทียบสถานีกรมควบคุมมลพิษ',output:'ระบบต้นแบบพยากรณ์ฝุ่น 1 ระบบ ติดตั้งนำร่อง 3 อำเภอ',trlStart:'4',trlEnd:'6',months:'12',declared:'8000000',b:{wage:3500000,util:50000,repair:300000,equip:1500000,foreign:300000,strength:0,other:2200000}},
+    {id:'FF71-004',title:'โครงการจัดอบรมเชิงปฏิบัติการและสัมมนาวิชาการประจำปี',lead:'นางสาวกนกพร ศรีสุข',plan:'แผนงานพัฒนาบุคลากร',objective:'เพื่อพัฒนาทักษะบุคลากรและจัดประชุมสัมมนาประจำปี',output:'ผู้เข้าร่วมอบรม 200 คน',trlStart:'',trlEnd:'',months:'12',declared:'3000000',b:{wage:1200000,util:100000,repair:0,equip:0,foreign:200000,strength:0,other:1500000}},
+    {id:'FF71-005',title:'การพัฒนาสายพันธุ์ข้าวก่ำทนแล้งด้วยเครื่องหมายโมเลกุล',lead:'รศ.ดร.ประเสริฐ นาดี',plan:'แผนงานเกษตรมูลค่าสูง',objective:'เพื่อคัดเลือกและพัฒนาสายพันธุ์ข้าวก่ำทนแล้งโดยใช้เครื่องหมายโมเลกุลช่วยคัดเลือก และทดสอบผลผลิตในแปลงทดลอง',output:'',trlStart:'4',trlEnd:'3',months:'24',declared:'9500000',b:{wage:4000000,util:100000,repair:400000,equip:1200000,foreign:300000,strength:0,other:3500000}},
+    {id:'FF71-006',title:'งบเสริมสร้างความเข้มแข็งด้าน ววน. ของหน่วยงาน',lead:'ผู้อำนวยการสถาบันวิจัย',plan:'บริหารจัดการงานวิจัย',objective:'เพื่อพัฒนาระบบบริหารจัดการงานวิจัยและพี่เลี้ยงนักวิจัยรุ่นใหม่ของหน่วยงาน',output:'ระบบติดตามผลงานวิจัย 1 ระบบ นักวิจัยรุ่นใหม่ได้รับการพัฒนา 30 คน',trlStart:'',trlEnd:'',months:'',declared:'3500000',b:{wage:800000,util:0,repair:0,equip:0,foreign:0,strength:2400000,other:300000}}
+  ]};}
+function blankProject(n){return{id:'P'+String(n).padStart(3,'0'),title:'',lead:'',plan:'',objective:'',output:'',trlStart:'',trlEnd:'',months:'',declared:'',b:Object.fromEntries(CATS.map(c=>[c[0],0]))};}
+
+let state;
+try{state=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!state||!state.projects)state=sample();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+
+const $=id=>document.getElementById(id);
+const fmt=n=>Math.round(n).toLocaleString('th-TH');
+const pct=n=>(n*100).toFixed(2);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>{const x=parseFloat(String(v??'').replace(/[, ]/g,''));return isFinite(x)?x:0};
+const ptotal=p=>CATS.reduce((s,c)=>s+num(p.b[c[0]]),0);
+const isStrength=p=>/เสริมสร้างความเข้มแข็ง/.test(p.title);
+function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(t._h);t._h=setTimeout(()=>t.hidden=true,1800)}
+
+/* ---------- similarity ---------- */
+function norm(s){s=String(s||'').toLowerCase();STOP.forEach(w=>{s=s.split(w).join('')});return s.replace(/[\s\-–—_.,;:()"'“”\/]/g,'')}
+function grams(s){const g=new Set();for(let i=0;i<s.length-2;i++)g.add(s.slice(i,i+3));return g}
+function dice(a,b){const A=grams(norm(a)),B=grams(norm(b));if(!A.size||!B.size)return 0;let i=0;A.forEach(x=>{if(B.has(x))i++});return 2*i/(A.size+B.size)}
+
+/* ---------- checks ---------- */
+function ruleCheck(){
+  const P=state.projects,T=P.reduce((s,p)=>s+ptotal(p),0);
+  const sum=k=>P.reduce((s,p)=>s+num(p.b[k]),0);
+  let fp,fc,ft;
+  if(T<25*M){fp=.05;fc=Infinity;ft='≤ 5% (วงเงิน < 25 ลบ.)'}
+  else if(T<=150*M){fp=.04;fc=Infinity;ft='≤ 4% (วงเงิน 25–150 ลบ.)'}
+  else{fp=.03;fc=20*M;ft='≤ 3% และ ≤ 20 ลบ. (วงเงิน > 150 ลบ.)'}
+  const R=[
+    {no:1,label:'ค่าจ้าง',keys:['wage'],p:.30,c:Infinity,txt:'≤ 30%'},
+    {no:2,label:'ค่าสาธารณูปโภค',keys:['util'],p:.01,c:Infinity,txt:'≤ 1%'},
+    {no:3,label:'ค่าซ่อมแซมครุภัณฑ์และสอบเทียบเครื่องมือ',keys:['repair'],p:.10,c:Infinity,txt:'≤ 10%'},
+    {no:4,label:'ค่าครุภัณฑ์',keys:['equip'],p:.20,c:Infinity,txt:'≤ 20%'},
+    {no:5,label:'ค่าซ่อมแซม/สอบเทียบ + ค่าครุภัณฑ์',keys:['repair','equip'],p:.20,c:Infinity,txt:'≤ 20%'},
+    {no:6,label:'ค่าเดินทางต่างประเทศ',keys:['foreign'],p:fp,c:fc,txt:ft},
+    {no:7,label:'งบเสริมสร้างความเข้มแข็งฯ',keys:['strength'],p:.05,c:5*M,txt:'≤ 5% และ ≤ 5 ลบ.'}
+  ];
+  R.forEach(r=>{
+    r.amt=r.keys.reduce((s,k)=>s+sum(k),0);
+    r.cap=Math.min(r.p*T,r.c);
+    r.share=T?r.amt/T:0;
+    r.fail=T>0&&r.amt>r.cap+0.5;
+    r.cut=r.fail?Math.ceil(Math.max((r.amt-r.p*T)/(1-r.p),r.c===Infinity?0:r.amt-r.c)):0;
+    r.top=P.map(p=>({p,v:r.keys.reduce((s,k)=>s+num(p.b[k]),0)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,3);
+  });
+  return{T,R};
+}
+function missionCheck(){
+  const kw=state.unit.mission.split(/[,،\n]/).map(s=>s.trim().toLowerCase()).filter(Boolean);
+  return state.projects.map(p=>{
+    const txt=(p.title+' '+p.objective+' '+p.output).toLowerCase();
+    const rd=RD.filter(w=>txt.includes(w)),non=NON.filter(w=>txt.includes(w)),mk=kw.filter(w=>txt.includes(w));
+    let lv,why;
+    if(isStrength(p)){lv='info';why='งบเสริมสร้างความเข้มแข็งฯ ตรวจตามเกณฑ์สัดส่วนข้อ 7'}
+    else if(non.length&&rd.length<2){lv='bad';why='มีลักษณะเป็นกิจกรรม ('+non.join(', ')+') ไม่ใช่โครงการวิจัยและพัฒนานวัตกรรม'}
+    else if(!mk.length&&kw.length){lv='warn';why='ไม่พบความเชื่อมโยงกับพันธกิจ/จุดเน้นของหน่วยงาน'}
+    else if(!rd.length){lv='warn';why='ไม่พบคำบ่งชี้กิจกรรมวิจัยในชื่อและวัตถุประสงค์'}
+    else if(non.length){lv='warn';why='มีองค์ประกอบกิจกรรมที่ไม่ใช่วิจัยปนอยู่ ('+non.join(', ')+')'}
+    else{lv='ok';why='สอดคล้องกับพันธกิจและมีลักษณะงานวิจัย'}
+    return{p,rd,non,mk,lv,why};
+  });
+}
+function dupCheck(){
+  const P=state.projects,out=[];
+  for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){
+    const a=P[i],b=P[j];if(!a.title||!b.title)continue;
+    const s=Math.max(dice(a.title,b.title),dice(a.title+a.objective,b.title+b.objective));
+    if(s>=.45)out.push({kind:'pair',a,b,s,lv:s>=.6?'bad':'warn',sameLead:a.lead&&a.lead===b.lead});
+  }
+  const prior=state.unit.prior.split('\n').map(s=>s.trim()).filter(Boolean);
+  P.forEach(p=>{if(!p.title)return;prior.forEach(q=>{const s=dice(p.title,q);if(s>=.45)out.push({kind:'prior',a:p,q,s,lv:s>=.6?'bad':'warn'})})});
+  const leads={};P.forEach(p=>{if(p.lead)(leads[p.lead]=leads[p.lead]||[]).push(p)});
+  Object.entries(leads).forEach(([l,ps])=>{if(ps.length>3)out.push({kind:'lead',lead:l,ps,lv:'warn',s:0})});
+  return out.sort((x,y)=>y.s-x.s);
+}
+function compCheck(){
+  const out=[],seen={};
+  state.projects.forEach(p=>{
+    const iss=[];
+    [...TEXTF,['trlStart','TRL เริ่มต้น'],['trlEnd','TRL เป้าหมาย'],['months','ระยะเวลา']].forEach(([k,l])=>{
+      if(isStrength(p)&&(k==='trlStart'||k==='trlEnd'))return;
+      if(!String(p[k]??'').trim())iss.push({lv:'bad',t:'ไม่ได้กรอก '+l});
+    });
+    const t=ptotal(p),d=num(p.declared);
+    if(t<=0)iss.push({lv:'bad',t:'ไม่มีรายละเอียดงบประมาณรายหมวด'});
+    if(String(p.declared).trim()&&Math.abs(d-t)>1)iss.push({lv:'bad',t:`งบรวมที่กรอก ${fmt(d)} บาท ไม่เท่ากับผลรวมรายหมวด ${fmt(t)} บาท (ต่าง ${fmt(d-t)} บาท)`});
+    const s=num(p.trlStart),e=num(p.trlEnd);
+    if(String(p.trlStart).trim()&&(s<1||s>9))iss.push({lv:'bad',t:'TRL เริ่มต้นไม่อยู่ในช่วง 1–9'});
+    if(String(p.trlEnd).trim()&&(e<1||e>9))iss.push({lv:'bad',t:'TRL เป้าหมายไม่อยู่ในช่วง 1–9'});
+    if(String(p.trlStart).trim()&&String(p.trlEnd).trim()&&e<s)iss.push({lv:'bad',t:`TRL เป้าหมาย (${e}) ต่ำกว่า TRL เริ่มต้น (${s})`});
+    const m=num(p.months);if(String(p.months).trim()&&(m<1||m>60))iss.push({lv:'warn',t:'ระยะเวลาโครงการไม่อยู่ในช่วง 1–60 เดือน'});
+    if(p.objective&&p.objective.trim().length<40)iss.push({lv:'warn',t:'วัตถุประสงค์สั้นเกินไป ไม่ระบุสิ่งที่จะวิจัยและวิธีวัดผลชัดเจน'});
+    const k=norm(p.title);if(k){if(seen[k])iss.push({lv:'bad',t:'ชื่อโครงการซ้ำกับ '+seen[k]});else seen[k]=p.id}
+    if(iss.length)out.push({p,iss});
+  });
+  return out;
+}
+function runAll(){return{rule:ruleCheck(),mis:missionCheck(),dup:dupCheck(),comp:compCheck()}}
+
+/* ---------- render: unit ---------- */
+const UF=[['u-name','name'],['u-fy','fy'],['u-deadline','deadline'],['u-mission','mission'],['u-prior','prior']];
+function renderUnit(){UF.forEach(([id,k])=>{$(id).value=state.unit[k]||''})}
+UF.forEach(([id,k])=>$(id).addEventListener('input',e=>{state.unit[k]=e.target.value;save();refresh()}));
+
+/* ---------- render: project editor ---------- */
+function projCard(p,i){
+  const pid='p'+i;
+  return `<details class="proj" data-i="${i}">
+  <summary><span class="pid">${esc(p.id)}</span><span class="ptitle" id="${pid}-sumtitle">${esc(p.title||'(ยังไม่มีชื่อ)')}</span><span class="row"><span class="num" id="${pid}-sumtotal">${fmt(ptotal(p))}</span><span id="${pid}-sumchips"></span></span></summary>
+  <div class="body">
+    <div class="grid">
+      <label>รหัสโครงการ<input id="${pid}-id" data-f="id" value="${esc(p.id)}"></label>
+      ${TEXTF.map(([k,l])=>k==='objective'||k==='output'||k==='title'
+        ?`<label class="span2">${l}<textarea id="${pid}-${k}" data-f="${k}" rows="${k==='title'?1:2}">${esc(p[k])}</textarea></label>`
+        :`<label>${l}<input id="${pid}-${k}" data-f="${k}" value="${esc(p[k])}"></label>`).join('')}
+      ${NUMF.map(([k,l])=>`<label>${l}<input class="num" inputmode="numeric" id="${pid}-${k}" data-f="${k}" value="${esc(p[k])}"></label>`).join('')}
+    </div>
+    <h3>รายละเอียดงบประมาณ (บาท)</h3>
+    <div class="budgetgrid">${CATS.map(([k,l])=>`<label>${l}<input class="num" inputmode="numeric" id="${pid}-b-${k}" data-b="${k}" value="${num(p.b[k])||''}"></label>`).join('')}</div>
+    <div class="sumline"><span>ผลรวมรายหมวด <b class="num" id="${pid}-sum">${fmt(ptotal(p))}</b> บาท</span><span class="muted" id="${pid}-diff"></span></div>
+    <div class="row"><button class="danger" type="button" data-del="${i}">ลบโครงการนี้</button></div>
+  </div></details>`;
+}
+function renderProjects(){
+  $('proj-list').innerHTML=state.projects.length?state.projects.map(projCard).join(''):'<div class="sheet muted">ยังไม่มีโครงการ กด "+ เพิ่มโครงการ" หรือนำเข้าจาก CSV</div>';
+  $('proj-count').textContent='('+state.projects.length+' โครงการ)';
+}
+$('proj-list').addEventListener('input',e=>{
+  const card=e.target.closest('.proj');if(!card)return;
+  const i=+card.dataset.i,p=state.projects[i];
+  if(e.target.dataset.f){p[e.target.dataset.f]=e.target.value}
+  else if(e.target.dataset.b){p.b[e.target.dataset.b]=num(e.target.value)}
+  save();refresh();
+});
+$('proj-list').addEventListener('click',e=>{
+  const d=e.target.closest('[data-del]');if(!d)return;
+  if(d.dataset.confirm!=='1'){d.dataset.confirm='1';d.textContent='กดอีกครั้งเพื่อยืนยันการลบ';setTimeout(()=>{if(d.isConnected){d.dataset.confirm='';d.textContent='ลบโครงการนี้'}},3000);return}
+  state.projects.splice(+d.dataset.del,1);save();renderProjects();refresh();toast('ลบโครงการแล้ว');
+});
+$('btn-add').addEventListener('click',()=>{
+  state.projects.push(blankProject(state.projects.length+1));save();renderProjects();refresh();
+  const last=$('proj-list').lastElementChild;if(last){last.open=true;last.querySelector('textarea, input').focus()}
+});
+
+/* ---------- render: results ---------- */
+const chip=(lv,t)=>`<span class="chip ${lv}">${t}</span>`;
+const LVTXT={ok:'ผ่าน',warn:'ควรทบทวน',bad:'ไม่ผ่าน',info:'งบประเภทพิเศษ'};
+function refresh(){
+  const r=runAll();
+  // per-project summary chips + sums in editor
+  const perProj={};
+  r.mis.forEach(m=>{(perProj[m.p.id]=perProj[m.p.id]||{bad:0,warn:0});if(m.lv==='bad'||m.lv==='warn')perProj[m.p.id][m.lv]++});
+  r.dup.forEach(d=>{[d.a,d.b,...(d.ps||[])].filter(Boolean).forEach(p=>{(perProj[p.id]=perProj[p.id]||{bad:0,warn:0})[d.lv]++})});
+  r.comp.forEach(c=>c.iss.forEach(s=>{(perProj[c.p.id]=perProj[c.p.id]||{bad:0,warn:0})[s.lv]++}));
+  state.projects.forEach((p,i)=>{
+    const pid='p'+i;if(!$(pid+'-sum'))return;
+    const t=ptotal(p),d=num(p.declared);
+    $(pid+'-sum').textContent=fmt(t);$(pid+'-sumtotal').textContent=fmt(t);
+    $(pid+'-sumtitle').textContent=p.title||'(ยังไม่มีชื่อ)';
+    $(pid+'-diff').textContent=String(p.declared).trim()&&Math.abs(d-t)>1?'ไม่ตรงกับงบรวมที่กรอก ('+fmt(d)+')':'';
+    const c=perProj[p.id]||{bad:0,warn:0};
+    $(pid+'-sumchips').innerHTML=c.bad?chip('bad',c.bad+' ไม่ผ่าน'):c.warn?chip('warn',c.warn+' ทบทวน'):chip('ok','ผ่าน');
+  });
+
+  // rules
+  const {T,R}=r.rule,rf=R.filter(x=>x.fail).length;
+  $('rule-total').textContent=fmt(T);
+  $('rule-chip').innerHTML=rf?chip('bad','เกินเกณฑ์ '+rf+' ข้อ'):chip('ok','ผ่านทุกข้อ');
+  $('rule-table').innerHTML=`<thead><tr><th>ข้อ</th><th>หมวด</th><th class="r">ยอดเสนอขอ (บาท)</th><th class="r">ร้อยละ</th><th>เกณฑ์</th><th class="r">เพดาน (บาท)</th><th>การใช้เพดาน</th><th>ผล</th><th class="r">ต้องลดอย่างน้อย</th></tr></thead><tbody>`+
+    R.map(x=>{const use=x.cap>0?Math.min(x.amt/x.cap,1.5):0;return`<tr><td class="num">${x.no}</td><td>${x.label}</td><td class="r num">${fmt(x.amt)}</td><td class="r num">${pct(x.share)}</td><td>${x.txt}</td><td class="r num">${fmt(x.cap)}</td><td><div class="meter" title="${(use*100).toFixed(0)}% ของเพดาน"><i class="${x.fail?'bad':''}" style="width:${use/1.5*100}%"></i><s style="left:${100/1.5}%"></s></div></td><td>${x.fail?chip('bad','เกิน'):chip('ok','ผ่าน')}</td><td class="r num">${x.fail?fmt(x.cut):'–'}</td></tr>`}).join('')+'</tbody>';
+
+  // mission
+  const mb=r.mis.filter(m=>m.lv==='bad').length,mw=r.mis.filter(m=>m.lv==='warn').length;
+  $('mission-chip').innerHTML=mb?chip('bad',mb+' ไม่ผ่าน'):mw?chip('warn',mw+' ควรทบทวน'):chip('ok','ผ่านทั้งหมด');
+  $('mission-table').innerHTML='<thead><tr><th>รหัส</th><th>โครงการ</th><th>คำพันธกิจที่พบ</th><th>คำบ่งชี้งานวิจัย</th><th>ผล</th><th>เหตุผล</th></tr></thead><tbody>'+
+    r.mis.map(m=>`<tr><td class="num">${esc(m.p.id)}</td><td>${esc(m.p.title)}</td><td>${esc(m.mk.join(', '))||'–'}</td><td class="num">${m.rd.length}</td><td>${chip(m.lv,LVTXT[m.lv])}</td><td>${esc(m.why)}</td></tr>`).join('')+'</tbody>';
+
+  // dup
+  const db=r.dup.filter(d=>d.lv==='bad').length,dw=r.dup.length-db;
+  $('dup-chip').innerHTML=db?chip('bad',db+' ซ้ำซ้อนสูง'):dw?chip('warn',dw+' ควรตรวจสอบ'):chip('ok','ไม่พบ');
+  $('dup-list').innerHTML=r.dup.length?r.dup.map(d=>{
+    if(d.kind==='lead')return`<li>${chip('warn','ภาระหัวหน้า')}<div><b>${esc(d.lead)}</b> เป็นหัวหน้า ${d.ps.length} โครงการ<div class="meta">${d.ps.map(p=>esc(p.id)).join(', ')}</div></div></li>`;
+    const head=d.lv==='bad'?'ซ้ำซ้อนสูง':'ควรตรวจสอบ';
+    if(d.kind==='prior')return`<li>${chip(d.lv,head)}<div><b>${esc(d.a.id)}</b> ${esc(d.a.title)}<div class="meta">คล้ายโครงการเดิม: ${esc(d.q)} · ค่าความคล้าย <span class="num">${d.s.toFixed(2)}</span></div></div></li>`;
+    return`<li>${chip(d.lv,head)}<div><b>${esc(d.a.id)}</b> ${esc(d.a.title)}<br><b>${esc(d.b.id)}</b> ${esc(d.b.title)}<div class="meta">ค่าความคล้าย <span class="num">${d.s.toFixed(2)}</span>${d.sameLead?' · หัวหน้าโครงการคนเดียวกัน':''}</div></div></li>`;
+  }).join(''):'<li class="empty" style="display:block">ไม่พบโครงการที่มีลักษณะซ้ำซ้อน</li>';
+
+  // completeness
+  const cb=r.comp.reduce((s,c)=>s+c.iss.filter(x=>x.lv==='bad').length,0),cw=r.comp.reduce((s,c)=>s+c.iss.filter(x=>x.lv==='warn').length,0);
+  $('comp-chip').innerHTML=cb?chip('bad',cb+' จุดต้องแก้'):cw?chip('warn',cw+' จุดควรปรับ'):chip('ok','ครบถ้วน');
+  $('comp-list').innerHTML=r.comp.length?r.comp.map(c=>{const lv=c.iss.some(x=>x.lv==='bad')?'bad':'warn';return`<li>${chip(lv,c.iss.length+' จุด')}<div><b>${esc(c.p.id)}</b> ${esc(c.p.title||'(ยังไม่มีชื่อ)')}<div class="meta">${c.iss.map(x=>'• '+esc(x.t)).join('<br>')}</div></div></li>`}).join(''):'<li class="empty" style="display:block">ข้อมูลครบถ้วนและถูกต้อง</li>';
+
+  // stats
+  const totalBad=rf+mb+db+cb,totalWarn=mw+dw+cw;
+  $('stats').innerHTML=`
+    <div class="stat"><b>${fmt(T)}</b><span>งบเสนอขอรวม (บาท)</span></div>
+    <div class="stat"><b>${state.projects.length}</b><span>โครงการ</span></div>
+    <div class="stat ${totalBad?'bad':'ok'}"><b>${totalBad}</b><span>ประเด็นที่ต้องแก้ไข</span></div>
+    <div class="stat ${totalWarn?'warn':'ok'}"><b>${totalWarn}</b><span>ประเด็นที่ควรทบทวน</span></div>
+    <div class="stat ${totalBad?'bad':totalWarn?'warn':'ok'}"><b style="font-family:var(--f-display);font-size:1.1rem">${totalBad?'ต้องปรับปรุงคำขอ':totalWarn?'ผ่านแบบมีข้อสังเกต':'ผ่าน'}</b><span>สรุปผลเบื้องต้น</span></div>`;
+  $('badge').hidden=!totalBad;$('badge').textContent=totalBad;
+  lastResult=r;
+  if(!letterEdited)$('letter').value=buildLetter(r);
+}
+
+/* ---------- letter ---------- */
+let lastResult=null,letterEdited=false;
+function buildLetter(r){
+  const u=state.unit,{T,R}=r.rule,P=state.projects,L=[];
+  L.push(`ข้อสังเกตต่อคำของบประมาณกองทุนส่งเสริม ววน. ด้านการสนับสนุนงานมูลฐาน (Fundamental Fund) ปีงบประมาณ พ.ศ. ${u.fy||'....'}`);
+  L.push(`หน่วยงาน: ${u.name||'....'}`);
+  L.push(`วงเงินเสนอขอรวม ${fmt(T)} บาท จำนวน ${P.length} โครงการ`,'');
+  L.push(`สำนักงานการวิจัยแห่งชาติ (สกสว.) ได้ตรวจสอบคำของบประมาณที่หน่วยงานเสนอผ่านระบบ NRIIS แล้ว มีข้อสังเกตให้หน่วยงานพิจารณาปรับปรุง ดังนี้`,'');
+  // 1
+  L.push('1. ความสอดคล้องกับพันธกิจและลักษณะงานวิจัยและพัฒนานวัตกรรม');
+  const m=r.mis.filter(x=>x.lv==='bad'||x.lv==='warn');
+  if(!m.length)L.push('   ไม่พบข้อสังเกต');
+  m.forEach((x,i)=>{
+    const t=`   1.${i+1} โครงการ "${x.p.title}" (${x.p.id}) `;
+    if(x.lv==='bad')L.push(t+`มีลักษณะเป็นกิจกรรม${x.non.join(' ')}ซึ่งไม่ใช่โครงการวิจัยและพัฒนานวัตกรรม จึงไม่เข้าข่ายการสนับสนุนจาก Fundamental Fund ขอให้หน่วยงานพิจารณาตัดออกจากคำขอ หรือปรับรูปแบบให้เป็นโครงการวิจัยที่มีโจทย์ วิธีการ และผลลัพธ์ที่ชัดเจน`);
+    else if(!x.mk.length)L.push(t+`ยังไม่แสดงความเชื่อมโยงกับพันธกิจหรือจุดเน้นด้าน ววน. ของหน่วยงานอย่างชัดเจน ขอให้ระบุความสอดคล้องกับพันธกิจและแผนด้าน ววน. ของหน่วยงาน`);
+    else L.push(t+`ขอให้ระบุโจทย์วิจัย วิธีการวิจัย และผลลัพธ์ที่คาดหวังให้ชัดเจนยิ่งขึ้น${x.non.length?' และแยกกิจกรรมที่ไม่ใช่การวิจัย ('+x.non.join(', ')+') ออกจากโครงการ':''}`);
+  });
+  L.push('');
+  // 2
+  L.push('2. ความซ้ำซ้อนของโครงการ');
+  const d=r.dup;
+  if(!d.length)L.push('   ไม่พบข้อสังเกต');
+  d.forEach((x,i)=>{
+    const t=`   2.${i+1} `;
+    if(x.kind==='pair')L.push(t+`โครงการ "${x.a.title}" (${x.a.id}) และโครงการ "${x.b.title}" (${x.b.id}) มีชื่อและวัตถุประสงค์${x.lv==='bad'?'ใกล้เคียงกันมาก':'คล้ายคลึงกัน'}${x.sameLead?' และมีหัวหน้าโครงการคนเดียวกัน':''} ขอให้หน่วยงานชี้แจงความแตกต่างของขอบเขต วิธีการ และผลผลิต หรือพิจารณารวมเป็นโครงการเดียว`);
+    else if(x.kind==='prior')L.push(t+`โครงการ "${x.a.title}" (${x.a.id}) มีความใกล้เคียงกับโครงการ "${x.q}" ที่เคยได้รับการสนับสนุน ขอให้ชี้แจงความต่อเนื่อง ผลการดำเนินงานเดิม และส่วนที่เป็นงานใหม่ที่ไม่ซ้ำซ้อน`);
+    else L.push(t+`${x.lead} เป็นหัวหน้าโครงการจำนวน ${x.ps.length} โครงการ (${x.ps.map(p=>p.id).join(', ')}) ขอให้หน่วยงานพิจารณาความเหมาะสมของภาระงานและความสามารถในการดำเนินงานให้แล้วเสร็จ`);
+  });
+  L.push('');
+  // 3
+  L.push('3. การเสนอของบประมาณตามเกณฑ์ที่คณะกรรมการส่งเสริมวิทยาศาสตร์ วิจัยและนวัตกรรม (กสว.) กำหนด');
+  const f=R.filter(x=>x.fail);
+  if(!f.length)L.push('   สัดส่วนงบประมาณทุกหมวดเป็นไปตามเกณฑ์');
+  f.forEach((x,i)=>{
+    const top=x.top.map(t=>`${t.p.id} (${fmt(t.v)} บาท)`).join(', ');
+    L.push(`   3.${i+1} ${x.label} รวม ${fmt(x.amt)} บาท คิดเป็นร้อยละ ${pct(x.share)} ของงบเสนอขอรวม เกินเกณฑ์ที่กำหนด (${x.txt.replace(/≤/g,'ไม่เกิน')}) ขอให้หน่วยงานปรับลดลงอย่างน้อย ${fmt(x.cut)} บาท${top?' โดยโครงการที่มียอดหมวดนี้สูง ได้แก่ '+top:''}`);
+  });
+  if(f.length)L.push('   หมายเหตุ: ยอดที่ต้องปรับลดคำนวณจากวงเงินรวมปัจจุบัน หากหน่วยงานปรับวงเงินรวม ขอให้ตรวจสอบสัดส่วนทุกหมวดอีกครั้ง');
+  L.push('');
+  // 4
+  L.push('4. ความครบถ้วนและถูกต้องของข้อมูลในระบบ NRIIS');
+  if(!r.comp.length)L.push('   ไม่พบข้อสังเกต');
+  r.comp.forEach((c,i)=>{L.push(`   4.${i+1} โครงการ "${c.p.title||'(ไม่ระบุชื่อ)'}" (${c.p.id}): `+c.iss.map(x=>x.t).join(' / '))});
+  L.push('');
+  L.push(`จึงขอให้หน่วยงานปรับปรุงคำของบประมาณในระบบ NRIIS ตามข้อสังเกตข้างต้น และยืนยันการส่งคำขอฉบับปรับปรุง${u.deadline?' ภายในวันที่ '+u.deadline:' ภายในระยะเวลาที่กำหนด'} หากมีข้อสงสัยสามารถติดต่อเจ้าหน้าที่ สกสว. ผู้ประสานงานได้`);
+  return L.join('\n');
+}
+$('letter').addEventListener('input',()=>{letterEdited=true});
+$('btn-regen').addEventListener('click',()=>{letterEdited=false;$('letter').value=buildLetter(runAll());toast('สร้างร่างใหม่แล้ว')});
+$('btn-copy').addEventListener('click',()=>copyText($('letter').value,$('letter')));
+function copyText(t,el){
+  const fallback=()=>{if(el&&el.select){el.focus();el.select();toast('เลือกข้อความแล้ว กด Ctrl+C เพื่อคัดลอก')}else toast('คัดลอกไม่ได้ กรุณาเลือกข้อความเอง')};
+  try{navigator.clipboard.writeText(t).then(()=>toast('คัดลอกแล้ว'),fallback)}catch(e){fallback()}
+}
+
+/* ---------- CSV ---------- */
+$('csv-template').textContent=CSV_HEAD.join(',');
+$('btn-import-toggle').addEventListener('click',()=>{$('import-box').hidden=!$('import-box').hidden});
+$('btn-copy-template').addEventListener('click',()=>copyText(CSV_HEAD.join(','),null));
+function parseCSV(s){
+  const rows=[];let row=[],cur='',q=false;
+  for(let i=0;i<s.length;i++){const c=s[i];
+    if(q){if(c==='"'){if(s[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
+    else if(c==='"')q=true;else if(c===','||c==='\t'){row.push(cur);cur=''}
+    else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur=''}else if(c!=='\r')cur+=c}
+  if(cur||row.length){row.push(cur);rows.push(row)}
+  return rows.filter(r=>r.some(x=>x.trim()));
+}
+$('btn-import').addEventListener('click',()=>{
+  const rows=parseCSV($('csv-input').value.replace(/^﻿/,''));
+  if(rows.length<2){$('import-msg').textContent='ไม่พบข้อมูล ต้องมีหัวตาราง 1 แถวและข้อมูลอย่างน้อย 1 แถว';return}
+  const ps=rows.slice(1).map((r,i)=>{const p=blankProject(i+1);
+    ['id','title','lead','plan','objective','output','trlStart','trlEnd','months','declared'].forEach((k,j)=>{if(r[j]!==undefined&&r[j].trim()!=='')p[k]=r[j].trim()});
+    if(p.declared)p.declared=String(num(p.declared));
+    CATS.forEach(([k],j)=>{p.b[k]=num(r[10+j])});return p});
+  state.projects=ps;save();renderProjects();refresh();
+  $('import-msg').textContent='นำเข้าแล้ว '+ps.length+' โครงการ';
+});
+
+/* ---------- tabs & misc ---------- */
+document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('nav.tabs button').forEach(x=>{x.setAttribute('aria-selected',x===b);$(x.dataset.panel).hidden=x!==b});
+  try{localStorage.setItem(KEY+'-tab',b.id)}catch(e){}
+}));
+$('btn-sample').addEventListener('click',()=>{state=sample();letterEdited=false;save();renderUnit();renderProjects();refresh();toast('โหลดข้อมูลตัวอย่างแล้ว')});
+$('btn-clear').addEventListener('click',e=>{
+  const b=e.currentTarget;
+  if(b.dataset.confirm!=='1'){b.dataset.confirm='1';b.textContent='กดอีกครั้งเพื่อยืนยัน';setTimeout(()=>{b.dataset.confirm='';b.textContent='ล้างข้อมูล'},3000);return}
+  b.dataset.confirm='';b.textContent='ล้างข้อมูล';
+  state={unit:{name:'',fy:'',deadline:'',mission:'',prior:''},projects:[]};letterEdited=false;save();renderUnit();renderProjects();refresh();toast('ล้างข้อมูลแล้ว');
+});
+
+renderUnit();renderProjects();refresh();
+try{const t=localStorage.getItem(KEY+'-tab');if(t&&$(t))$(t).click()}catch(e){}
+</script>
+
+</body></html>
