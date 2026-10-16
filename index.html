@@ -4,6 +4,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 <style>
 /* Layout: official review sheet — file + unit bar on top, tabbed workspace below; results follow the 4 checks; fill-back tab mirrors the reviewer columns of the NRIIS sheet */
 :root{
@@ -26,6 +27,7 @@
   --ok:#62c795; --ok-soft:#163327; --warn:#e5b154; --warn-soft:#3a2d12; --bad:#f2877c; --bad-soft:#3d1d1a;
   --plan:#231e33; --strength:#33202b; color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
 .wrap{max-width:1200px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
 h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.35}
@@ -57,6 +59,11 @@ button.danger{background:transparent;color:var(--bad);border-color:var(--bad)}
 .up-main{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .sub{font-size:.8rem;color:var(--muted)}
 .arrow{color:var(--accent);font-weight:600}
+.exportbar{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;padding-block:12px}
+.exportbar > div:first-child{flex:1 1 280px;min-width:0}
+.xbtn{display:inline-flex;align-items:center;gap:8px}
+.xbtn .ft{font-family:var(--f-num);font-size:.72rem;font-weight:500;padding:1px 5px;border-radius:3px;border:1px solid currentColor;opacity:.85}
+button:disabled{opacity:.6;cursor:progress}
 .up-main > div{flex:1 1 260px;min-width:0}
 .up-main svg{color:var(--accent);flex:none}
 .up-status{font-size:.88rem;color:var(--muted)}
@@ -160,6 +167,16 @@ tr.k-project td.t{padding-left:26px}
     </div>
   </section>
 
+  <section id="exportbar" class="sheet exportbar" hidden aria-label="ออกรายงาน">
+    <div><b>ออกรายงานเป็นไฟล์ที่แก้ไขได้</b><div class="note">สร้างจากผลตรวจล่าสุดในหน้านี้ · ร่างข้อสังเกตใช้ข้อความในแท็บร่างข้อสังเกต รวมส่วนที่แก้เองแล้ว</div></div>
+    <div class="row">
+      <button class="xbtn" id="x-report-docx" type="button">รายงานผลการตรวจ <span class="ft">DOCX</span></button>
+      <button class="xbtn ghost" id="x-report-xlsx" type="button">ผลการตรวจ <span class="ft">XLSX</span></button>
+      <button class="xbtn ghost" id="x-fill-xlsx" type="button">กรอกกลับชีต <span class="ft">XLSX</span></button>
+      <button class="xbtn ghost" id="x-letter-docx" type="button">ร่างข้อสังเกต <span class="ft">DOCX</span></button>
+    </div>
+  </section>
+
   <nav class="tabs" role="tablist" id="tabs" hidden>
     <button role="tab" id="tab-struct" aria-selected="false" data-panel="p-struct" type="button">โครงสร้างคำขอ</button>
     <button role="tab" id="tab-result" aria-selected="true" data-panel="p-result" type="button">ผลการตรวจ <span class="tabbadge" id="badge" hidden></span></button>
@@ -209,7 +226,8 @@ tr.k-project td.t{padding-left:26px}
     <header><h2>ผลสำหรับกรอกกลับชีตตรวจคำขอ</h2></header>
     <p class="note">ค่า Y/N เป็นข้อเสนอจากระบบ ผู้ตรวจควรทบทวนก่อนวาง ปุ่มคัดลอกจะคัดลอกทุกแถวตั้งแต่แถวแรกของข้อมูลเรียงตรงกับแถวในไฟล์ (แถวแผนงานและหน่วยงานเป็นช่องว่าง) เลือกเซลล์ตามที่ระบุในไฟล์ต้นฉบับแล้ววาง</p>
     <div class="row">
-      <button id="btn-copy-stu" type="button">คัดลอก 2.4–2.6</button><span class="note" id="hint-stu"></span>
+      <button class="xbtn" id="x-fill-xlsx2" type="button">ดาวน์โหลด <span class="ft">XLSX</span></button>
+      <button class="ghost" id="btn-copy-stu" type="button">คัดลอก 2.4–2.6</button><span class="note" id="hint-stu"></span>
     </div>
     <div class="row">
       <button class="ghost" id="btn-copy-notes" type="button">คัดลอกหมายเหตุและข้อสังเกต</button><span class="note" id="hint-notes"></span>
@@ -220,7 +238,7 @@ tr.k-project td.t{padding-left:26px}
   <section id="p-letter" class="check" hidden>
     <div class="row" style="justify-content:space-between">
       <h2>ร่างข้อสังเกตถึงหน่วยงาน</h2>
-      <div class="row"><button class="ghost" id="btn-regen" type="button">สร้างร่างใหม่จากผลตรวจล่าสุด</button><button id="btn-copy" type="button">คัดลอกข้อความ</button></div>
+      <div class="row"><button class="ghost" id="btn-regen" type="button">สร้างร่างใหม่จากผลตรวจล่าสุด</button><button class="ghost" id="btn-copy" type="button">คัดลอกข้อความ</button><button class="xbtn" id="x-letter-docx2" type="button">ดาวน์โหลด <span class="ft">DOCX</span></button></div>
     </div>
     <p class="note">แก้ไขข้อความในกล่องได้โดยตรง กด "สร้างร่างใหม่" เมื่อเปลี่ยนไฟล์หรือการตั้งค่า (ข้อความที่แก้เองจะถูกแทนที่)</p>
     <textarea id="letter" aria-label="ร่างข้อสังเกต"></textarea>
@@ -724,7 +742,7 @@ function load(){
   try{data=FFE.parse(S.rows)}catch(e){data=null;$('err').textContent=e.message;$('err').hidden=false;showEmpty();return}
   if(!S.opt.fy&&data.fy)S.opt.fy=String(data.fy);
   if(S.unitIdx>=data.units.length)S.unitIdx=0;
-  ['unitbox','tabs'].forEach(id=>$(id).hidden=false);
+  ['unitbox','tabs','exportbar'].forEach(id=>$(id).hidden=false);
   const np=data.units.reduce((s,u)=>s+u.items.filter(i=>i.kind==='project').length,0);
   $('up-status').innerHTML=`ไฟล์ปัจจุบัน <b>${esc(S.fileName)}</b> · ${data.units.length} หน่วยงาน · ${np} โครงการ · ปีงบประมาณ ${data.fy||'ไม่ระบุ'} — อัปโหลดไฟล์ใหม่เพื่อแทนที่`;
   $('u-select').innerHTML=data.units.map((u,i)=>`<option value="${i}">${esc(u.name)}</option>`).join('');
@@ -735,7 +753,7 @@ function load(){
   $('file-name').textContent=S.fileName;
   letterEdited=false;run();showTab();
 }
-function showEmpty(){['unitbox','tabs','p-struct','p-result','p-fill','p-letter','p-spec'].forEach(id=>$(id).hidden=true);$('up-status').textContent='ยังไม่มีไฟล์ อัปโหลดไฟล์เพื่อเริ่มตรวจ';loadItems()}
+function showEmpty(){['unitbox','tabs','exportbar','p-struct','p-result','p-fill','p-letter','p-spec'].forEach(id=>$(id).hidden=true);$('up-status').textContent='ยังไม่มีไฟล์ อัปโหลดไฟล์เพื่อเริ่มตรวจ';loadItems()}
 function loadItems(){
   itemsParsed=null;
   if(!S.itemRows){$('up-status2').textContent='ไม่บังคับ · ถ้าไม่อัปโหลด ระบบจะข้ามการตรวจข้อ 5';return}
@@ -904,6 +922,180 @@ $('btn-copy').addEventListener('click',()=>copyText($('letter').value,$('letter'
 $('btn-clear').addEventListener('click',e=>{const b=e.currentTarget;
   if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='กดอีกครั้งเพื่อยืนยัน';setTimeout(()=>{b.dataset.c='';b.textContent='ล้างข้อมูล'},3000);return}
   b.dataset.c='';b.textContent='ล้างข้อมูล';S=BLANK();save();load();toast('ล้างข้อมูลแล้ว')});
+
+/* ---------- export: editable Word / Excel files ---------- */
+function tally(){
+  const t={};const cnt=list=>{const o={bad:0,warn:0};list.forEach(c=>c.iss.forEach(x=>o[x.lv]++));return o};
+  t.mis={bad:res.mis.filter(m=>m.lv==='bad').length,warn:res.mis.filter(m=>m.lv==='warn').length};
+  const db=res.dup.filter(d=>d.lv==='bad').length;t.dup={bad:db,warn:res.dup.length-db};
+  t.rule={bad:res.R.filter(x=>x.fail).length,warn:0};
+  t.bud=cnt(res.bud);
+  t.exp={bad:0,warn:0};if(res.exp){res.exp.findings.forEach(f=>t.exp[f.lv]++);res.exp.recon.forEach(r=>{if(!r.ok)t.exp[r.lv]++});if(res.exp.orphans.length)t.exp.warn++}
+  t.comp=cnt(res.comp);
+  t.bad=Object.values(t).reduce((s,x)=>s+x.bad,0);t.warn=Object.values(t).filter(x=>x&&x.warn!==undefined).reduce((s,x)=>s+x.warn,0);
+  t.verdict=t.bad?'ต้องปรับปรุงคำขอ':t.warn?'ผ่านแบบมีข้อสังเกต':'ผ่าน';
+  return t;
+}
+const CHECKS=[['mis','1. เป็นโครงการวิจัยและพัฒนานวัตกรรมตามพันธกิจ'],['dup','2. ความซ้ำซ้อนของโครงการ'],['rule','3. สัดส่วนงบประมาณตามเกณฑ์ กสว.'],['bud','4. ยอดงบแผนงาน โครงการ และกรอบงบประมาณ'],['exp','5. หมวดและอัตราค่าใช้จ่ายรายรายการ'],['comp','6. ความครบถ้วนและถูกต้องของข้อมูล']];
+const LVTH={bad:'ต้องแก้ไข',warn:'ควรทบทวน',ok:'ผ่าน',info:'ข้อมูล'};
+const thaiDate=()=>new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+const fileStamp=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()+543}${p(d.getMonth()+1)}${p(d.getDate())}`};
+const safeName=s=>String(s).replace(/[\\/:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim().slice(0,80);
+const baseName=kind=>safeName(`${kind}_FF${String(S.opt.fy||'').slice(-2)}_${unit.name}_${fileStamp()}`);
+const itemName=it=>it.kind==='unit'?unit.name:it.title;
+
+async function saveFile(name,blob){
+  try{
+    if(window.claude&&typeof window.claude.use==='function'){
+      const dl=await window.claude.use('downloads');
+      if(dl){
+        try{await dl.save({filename:name,data:blob});toast('บันทึกไฟล์ '+name+' แล้ว')}
+        catch(e){toast(e&&e.code==='declined'?'ยกเลิกการบันทึกไฟล์':'บันทึกไฟล์ไม่สำเร็จ'+(e&&e.message?': '+e.message:''))}
+        return;
+      }
+    }
+  }catch(e){}
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);toast('ดาวน์โหลด '+name);
+}
+function needLib(ok,what){if(ok)return true;toast('โหลดตัวสร้างไฟล์ '+what+' ไม่สำเร็จ ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วโหลดหน้าใหม่');return false}
+async function busy(btn,fn){if(btn.disabled)return;const t=btn.textContent;btn.disabled=true;btn.textContent='กำลังสร้างไฟล์…';try{await fn()}catch(e){console.error(e);toast('สร้างไฟล์ไม่สำเร็จ: '+(e&&e.message||e))}finally{btn.disabled=false;btn.textContent=t}}
+
+/* ----- shared row builders (used by both Word and Excel) ----- */
+function rowsMission(){return res.mis.map(m=>[m.p.code,m.p.title,m.mk.join(', ')||'–',m.rd.length,LVTH[m.lv],m.why,m.S,m.T])}
+function rowsDup(){return res.dup.map(d=>{
+  const lv=LVTH[d.lv];
+  if(d.kind==='pair')return[lv,'คู่โครงการคล้ายกัน',d.a.code,d.a.title,d.b.code,d.b.title,+d.s.toFixed(2),d.sameLead?'หัวหน้าโครงการคนเดียวกัน':''];
+  if(d.kind==='prior')return[lv,'คล้ายโครงการเดิม',d.a.code,d.a.title,'',d.q,+d.s.toFixed(2),''];
+  if(d.kind==='external')return[lv,'ยื่นแหล่งทุนอื่น',d.a.code,d.a.title,'','', '',d.txt];
+  return[lv,'ภาระหัวหน้าโครงการ','',d.lead,'',d.ps.map(p=>p.code).join(', '),'',`เป็นหัวหน้า ${d.ps.length} โครงการ`]})}
+function rowsRule(){return res.R.map(x=>[x.no,x.label,Math.round(x.amt),+pct(x.share),x.txt,Math.round(x.cap),x.fail?'เกินเกณฑ์':'ผ่าน',x.fail?x.cut:'',x.fail?'':Math.round(x.headroom)])}
+function rowsPlans(){return res.budget.plans.map(x=>[x.p.code,x.p.title,x.p.kind==='strength'?'แผนเสริมสร้างฯ':'แผนงานวิจัยฯ',x.n||'',Math.round(x.Y),x.n?Math.round(x.childSum):'',x.n?Math.round(x.Y-x.childSum):'',!x.n?'ไม่มีโครงการย่อย':x.ok?'ตรงกัน':'ไม่ตรง'])}
+function rowsIssues(list){const out=[];list.forEach(c=>c.iss.forEach(x=>out.push([c.it.row,c.it.code||'ภาพรวม',itemName(c.it),LVTH[x.lv],x.t,data.col[x.field]?data.col[x.field]+c.it.row:''])));return out}
+function rowsRecon(){return res.exp?res.exp.recon.map(r=>[r.t.code,r.t.title,r.n,Math.round(r.total),r.n?Math.round(r.itemsTotal):'',r.rows.filter(x=>!x.ok&&r.n).map(x=>`${x.l}: ${fmt(x.file)} / ${fmt(x.items)}`).join('; '),r.ok?'ตรงกัน':r.missing?'ไม่มีรายการ':'ไม่ตรง']):[]}
+function rowsItems(){return res.exp?res.exp.findings.map(f=>[f.t.code,f.t.title,f.x.itemId,f.x.cat,f.x.sub,f.x.detail,f.x.qty,f.x.uom,f.x.price,f.x.amount,LVTH[f.lv],f.to?FFE.CATNAME[f.to]:'',f.msg,f.ref]):[]}
+
+/* ----- Excel ----- */
+function sheet(aoa,widths){const ws=XLSX.utils.aoa_to_sheet(aoa);if(widths)ws['!cols']=widths.map(w=>({wch:w}));return ws}
+function headerBlock(title){
+  return[[title],['หน่วยงาน',unit.name],['กระทรวง',unit.ministry||''],['ปีงบประมาณ',S.opt.fy||''],['ไฟล์ตรวจคำขอ',S.fileName||''],['ไฟล์รายการค่าใช้จ่าย',S.itemsFile||'(ไม่ได้อัปโหลด)'],['วันที่ตรวจ',thaiDate()],[]];
+}
+function fillAoa(){
+  const {out}=fillRows();
+  return[['แถวในไฟล์ต้นฉบับ','รหัส','ประเภท','ชื่อแผนงาน/โครงการ','2.4 สอดคล้องพันธกิจ','2.5 สอดคล้องมาตรา 17(2)','2.6 ซ้ำซ้อน','หมายเหตุและข้อสังเกต'],
+    ...out.map(x=>[x.r,x.it?x.it.code:'',x.it?KIND[x.it.kind]:'',x.it?itemName(x.it):'',x.S,x.T,x.U,x.notes])];
+}
+const FILLW=[10,12,14,60,12,12,10,90];
+function exportResultsXlsx(){
+  if(!needLib(typeof XLSX!=='undefined','Excel'))return;
+  const t=tally(),wb=XLSX.utils.book_new(),B=res.budget;
+  XLSX.utils.book_append_sheet(wb,sheet([...headerBlock('รายงานผลการตรวจคำของบประมาณ Fundamental Fund'),
+    ['งบเสนอขอรวม (บาท)',Math.round(res.T)],['จำนวนแผนงาน / โครงการ',`${res.plans.length} / ${res.projects.length}`],['ประเด็นที่ต้องแก้ไข',t.bad],['ประเด็นที่ควรทบทวน',t.warn],['สรุปผลเบื้องต้น',t.verdict],[],
+    ['ด้านที่ตรวจ','ต้องแก้ไข','ควรทบทวน'],...CHECKS.map(([k,l])=>[l+(k==='exp'&&!res.exp?' (ไม่ได้ตรวจ)':''),t[k].bad,t[k].warn])],[34,70,14]),'สรุป');
+  XLSX.utils.book_append_sheet(wb,sheet([['รหัส','ชื่อโครงการ','คำพันธกิจที่พบ','จำนวนคำบ่งชี้วิจัย','ผล','เหตุผล','เสนอ 2.4','เสนอ 2.5'],...rowsMission()],[12,60,24,10,12,60,9,9]),'1-พันธกิจ');
+  XLSX.utils.book_append_sheet(wb,sheet([['ระดับ','ประเภท','รหัส','ชื่อโครงการ','รหัสที่คล้าย','ชื่อโครงการที่คล้าย / รายการ','ค่าความคล้าย','หมายเหตุ'],...(res.dup.length?rowsDup():[['ไม่พบโครงการที่มีลักษณะซ้ำซ้อน']])],[12,18,12,50,12,50,10,30]),'2-ซ้ำซ้อน');
+  XLSX.utils.book_append_sheet(wb,sheet([[`งบเสนอขอรวม (ตัวหาร) ${fmt(res.T)} บาท = งบแผนงานวิจัยฯ ${fmt(res.researchTotal)}${res.inclS?' + แผนเสริมสร้างฯ '+fmt(res.strengthTotal):''}`],[],
+    ['ข้อ','หมวด','ยอดเสนอขอ (บาท)','ร้อยละ','เกณฑ์','เพดาน (บาท)','ผล','ต้องลดอย่างน้อย (บาท)','คงเหลือถึงเพดาน (บาท)'],...rowsRule()],[6,38,16,9,44,16,11,18,18]),'3-สัดส่วนงบ');
+  XLSX.utils.book_append_sheet(wb,sheet([['รายการ','จำนวนเงิน (บาท)','หมายเหตุ'],['กรอบงบประมาณที่ สกสว. แจ้ง',B.frame?Math.round(B.frame):'',B.frameSrc],['งบรวมทุกแผนงาน (รวมแผนเสริมสร้างฯ)',Math.round(B.planTotal),`วิจัยฯ ${fmt(B.researchTotal)} + เสริมสร้างฯ ${fmt(B.strengthTotal)}`],['ผลต่าง',B.frame?Math.round(B.planTotal-B.frame):'',!B.frame?'ไม่มีกรอบให้เทียบ':B.frameOk?'เท่ากับกรอบ':'ไม่เท่ากับกรอบ'],[],
+    ['รหัส','แผนงาน','ประเภท','จำนวนโครงการ','งบแผนงาน (บาท)','ผลรวมงบโครงการ (บาท)','ผลต่าง (บาท)','ผล'],...rowsPlans(),[],
+    ['แถวในไฟล์','รหัส','ชื่อ','ระดับ','ข้อสังเกต','เซลล์'],...(res.bud.length?rowsIssues(res.bud):[['','','','','ยอดงบประมาณถูกต้อง']])],[36,50,40,14,18,20,16,16]),'4-ยอดงบและกรอบ');
+  XLSX.utils.book_append_sheet(wb,sheet(res.exp?[['รหัส','โครงการ / แผนงาน','จำนวนรายการ','งบเสนอขอ (บาท)','รวมรายการ (บาท)','หมวดที่ไม่ตรง (คำขอ / รายการ)','ผล'],...rowsRecon(),[],
+    ['รหัสโครงการ','ชื่อโครงการ','รหัสรายการ','หมวด','หมวดย่อย','รายละเอียด','จำนวน','หน่วยนับ','ราคาต่อหน่วย','งบของรายการ','ระดับ','ควรอยู่หมวด','ข้อสังเกต','อ้างอิงคู่มือ FF บทที่ 2'],...(res.exp.findings.length?rowsItems():[['ไม่พบรายการที่ผิดหมวดหรือเกินอัตรา']])]
+    :[['ไม่ได้อัปโหลดไฟล์รายการค่าใช้จ่าย จึงไม่ได้ตรวจด้านนี้']],[12,44,12,16,30,50,10,10,12,14,12,16,70,22]),'5-หมวดค่าใช้จ่าย');
+  XLSX.utils.book_append_sheet(wb,sheet([['แถวในไฟล์','รหัส','ชื่อ','ระดับ','ข้อสังเกต','เซลล์'],...(res.comp.length?rowsIssues(res.comp):[['','','','','ข้อมูลครบถ้วนและถูกต้อง']])],[10,12,56,12,90,8]),'6-ความครบถ้วน');
+  XLSX.utils.book_append_sheet(wb,sheet(fillAoa(),FILLW),'กรอกกลับชีต');
+  const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  return saveFile(baseName('ผลการตรวจ')+'.xlsx',new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+}
+function exportFillXlsx(){
+  if(!needLib(typeof XLSX!=='undefined','Excel'))return;
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,sheet(fillAoa(),FILLW),'กรอกกลับชีต');
+  const c=data.col;
+  XLSX.utils.book_append_sheet(wb,sheet([['วิธีใช้'],[`1. คอลัมน์ "แถวในไฟล์ต้นฉบับ" ตรงกับเลขแถวในชีตตรวจคำขอ (${S.fileName||''})`],[`2. คัดลอกคอลัมน์ 2.4–2.6 ไปวางที่เซลล์ ${c.S||'S'}${fillRows().first} ของชีตต้นฉบับ (คอลัมน์ ${c.S||'S'}:${c.U||'U'})`],['3. ค่า Y/N เป็นข้อเสนอจากระบบ ผู้ตรวจควรทบทวนก่อนวาง'],['4. คอลัมน์หมายเหตุใช้วางในคอลัมน์ข้อสังเกตที่ต้องการ']],[100]),'วิธีใช้');
+  const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  return saveFile(baseName('กรอกกลับชีต')+'.xlsx',new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+}
+
+/* ----- Word ----- */
+const WFONT='TH Sarabun New';
+function W(){
+  const D=window.docx;
+  const font={ascii:WFONT,hAnsi:WFONT,cs:WFONT,eastAsia:WFONT};
+  const run=(t,o={})=>new D.TextRun({text:String(t??''),font,size:o.size||32,sizeComplexScript:o.size||32,bold:!!o.bold,boldComplexScript:!!o.bold,color:o.color});
+  const para=(t,o={})=>new D.Paragraph({children:Array.isArray(t)?t:[run(t,o)],alignment:o.center?D.AlignmentType.CENTER:D.AlignmentType.LEFT,indent:o.indent?{left:o.indent,hanging:o.hanging||0}:undefined,spacing:{after:o.after??60,before:o.before||0},keepNext:!!o.keepNext});
+  const TW=9332;
+  const cell=(t,o={})=>new D.TableCell({children:String(t??'').split('\n').map(l=>para(l,{size:26,bold:o.head,after:0})),shading:o.head?{fill:'E7EEF8',type:D.ShadingType.CLEAR,color:'auto'}:undefined,margins:{top:40,bottom:40,left:80,right:80},width:o.w?{size:o.w,type:D.WidthType.DXA}:undefined});
+  const table=(head,rows,pcts)=>{const widths=pcts?pcts.map(x=>Math.round(TW*x/100)):head.map(()=>Math.round(TW/head.length));return new D.Table({width:{size:TW,type:D.WidthType.DXA},columnWidths:widths,layout:D.TableLayoutType.FIXED,rows:[new D.TableRow({tableHeader:true,children:head.map((h,i)=>cell(h,{head:true,w:widths[i]}))}),...rows.map(r=>new D.TableRow({cantSplit:true,children:r.map((c,i)=>cell(typeof c==='number'?fmt(c):c,{w:widths[i]}))}))]})};
+  const doc=children=>new D.Document({creator:'ระบบตรวจคำของบประมาณ FF',title:'FF',styles:{default:{document:{run:{font,size:32,sizeComplexScript:32}}}},
+    sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1440,bottom:1134,left:1440,right:1134}}},children}]});
+  return{D,run,para,table,doc};
+}
+async function exportReportDocx(){
+  if(!needLib(window.docx,'Word'))return;
+  const {D,run,para,table,doc}=W(),t=tally(),B=res.budget,K=[];
+  const h=(txt)=>K.push(para(txt,{bold:true,size:34,before:200,after:80,keepNext:true}));
+  const note=(txt)=>K.push(para(txt,{size:28,color:'5A6878'}));
+  const empty=(txt)=>K.push(para(txt,{size:30}));
+  K.push(para('รายงานผลการตรวจคำของบประมาณ',{bold:true,size:40,center:true,after:0}));
+  K.push(para(`กองทุนส่งเสริม ววน. ด้านการสนับสนุนงานมูลฐาน (Fundamental Fund) ปีงบประมาณ พ.ศ. ${S.opt.fy||'....'}`,{bold:true,size:34,center:true,after:200}));
+  [['หน่วยงาน',unit.name+(unit.ministry?' ('+unit.ministry+')':'')],['ไฟล์ตรวจคำขอ',S.fileName||'-'],['ไฟล์รายการค่าใช้จ่าย',S.itemsFile||'ไม่ได้อัปโหลด'],['วันที่ตรวจ',thaiDate()]].forEach(([a,b])=>K.push(para([run(a+': ',{bold:true}),run(b)],{after:20})));
+  h('สรุปผลการตรวจ');
+  K.push(para([run('งบเสนอขอรวม ',{bold:true}),run(`${fmt(res.T)} บาท · ${res.plans.length} แผนงาน ${res.projects.length} โครงการ`)],{after:20}));
+  K.push(para([run('ผลเบื้องต้น ',{bold:true}),run(`${t.verdict} (ต้องแก้ไข ${t.bad} ประเด็น ควรทบทวน ${t.warn} ประเด็น)`)],{after:100}));
+  K.push(table(['ด้านที่ตรวจ','ต้องแก้ไข','ควรทบทวน'],CHECKS.map(([k,l])=>[l+(k==='exp'&&!res.exp?' (ไม่ได้ตรวจ)':''),String(t[k].bad),String(t[k].warn)]),[70,15,15]));
+  h(CHECKS[0][1]);
+  K.push(table(['รหัส','โครงการ','คำพันธกิจที่พบ','ผล','เหตุผล'],res.mis.map(m=>[m.p.code,m.p.title,m.mk.join(', ')||'–',LVTH[m.lv],m.why]),[13,33,15,10,29]));
+  note('คัดกรองจากคำในชื่อ วัตถุประสงค์ ผลผลิต และคำสำคัญ ผู้ตรวจควรอ่านยืนยันรายการ "ควรทบทวน" และ "ต้องแก้ไข" ก่อนแจ้งหน่วยงาน');
+  h(CHECKS[1][1]);
+  if(res.dup.length)K.push(table(['ระดับ','ประเด็น','รายละเอียด'],res.dup.map(d=>[LVTH[d.lv],d.kind==='pair'?'คู่โครงการคล้ายกัน':d.kind==='prior'?'คล้ายโครงการเดิม':d.kind==='external'?'ยื่นแหล่งทุนอื่น':'ภาระหัวหน้าโครงการ',
+    d.kind==='pair'?`${d.a.code} ${d.a.title}\n${d.b.code} ${d.b.title}\nค่าความคล้าย ${d.s.toFixed(2)}${d.sameLead?' · หัวหน้าโครงการคนเดียวกัน':''}`:d.kind==='prior'?`${d.a.code} ${d.a.title}\nคล้าย: ${d.q} (${d.s.toFixed(2)})`:d.kind==='external'?`${d.a.code} ${d.a.title}\n${d.txt}`:`${d.lead} เป็นหัวหน้า ${d.ps.length} โครงการ (${d.ps.map(p=>p.code).join(', ')})`]),[14,22,64]));
+  else empty('ไม่พบโครงการที่มีลักษณะซ้ำซ้อนภายในหน่วยงาน');
+  h(CHECKS[2][1]);
+  note(`ตัวหาร: งบเสนอขอรวม ${fmt(res.T)} บาท (งบแผนงานวิจัยฯ ${fmt(res.researchTotal)}${res.inclS?' + แผนเสริมสร้างฯ '+fmt(res.strengthTotal):''})`);
+  K.push(table(['หมวด','ยอด (บาท)','ร้อยละ','เกณฑ์','ผล','ต้องลด (บาท)'],res.R.map(x=>[`${x.no}. ${x.label}`,fmt(x.amt),pct(x.share),x.txt,x.fail?'เกินเกณฑ์':'ผ่าน',x.fail?fmt(x.cut):'–']),[26,15,9,26,11,13]));
+  h(CHECKS[3][1]);
+  K.push(table(['รายการ','จำนวนเงิน (บาท)','หมายเหตุ'],[['กรอบงบประมาณที่ สกสว. แจ้ง',B.frame?fmt(B.frame):'–',B.frameSrc],['งบรวมทุกแผนงาน (รวมแผนเสริมสร้างฯ)',fmt(B.planTotal),`วิจัยฯ ${fmt(B.researchTotal)} + เสริมสร้างฯ ${fmt(B.strengthTotal)}`],['ผลต่าง',B.frame?fmt(B.planTotal-B.frame):'–',!B.frame?'ไม่มีกรอบให้เทียบ':B.frameOk?'เท่ากับกรอบ':'ไม่เท่ากับกรอบ']],[40,20,40]));
+  K.push(para('',{after:60}));
+  K.push(table(['รหัส','แผนงาน','งบแผนงาน','ผลรวมโครงการ','ผล'],res.budget.plans.map(x=>[x.p.code,x.p.title,fmt(x.Y),x.n?fmt(x.childSum):'–',!x.n?'ไม่มีโครงการย่อย':x.ok?'ตรงกัน':'ไม่ตรง']),[12,44,15,15,14]));
+  if(res.bud.length){K.push(para('',{after:60}));K.push(table(['รหัส','ข้อสังเกต'],res.bud.map(c=>[c.it.code||'ภาพรวม',c.iss.map(x=>`[${LVTH[x.lv]}] ${x.t}`).join('\n')]),[14,86]))}
+  h(CHECKS[4][1]);
+  if(!res.exp)empty('ไม่ได้อัปโหลดไฟล์รายการค่าใช้จ่าย จึงไม่ได้ตรวจด้านนี้');
+  else{
+    note(`ตรวจ ${res.exp.count} รายการ อ้างอิงคู่มือการจัดทำคำของบประมาณ FF บทที่ 2`);
+    const bad=res.exp.recon.filter(r=>!r.ok);
+    if(bad.length)K.push(table(['รหัส','งบเสนอขอ','รวมรายการ','ประเด็น'],bad.map(r=>[r.t.code,fmt(r.total),r.n?fmt(r.itemsTotal):'–',r.missing?'ไม่มีรายการค่าใช้จ่าย':r.rows.filter(x=>!x.ok).map(x=>`${x.l}: ${fmt(x.file)} / ${fmt(x.items)}`).join('\n')||'ยอดรวมไม่ตรง']),[14,18,18,50]));
+    if(res.exp.findings.length){K.push(para('',{after:60}));K.push(table(['โครงการ','รายการ','ข้อสังเกต'],res.exp.findings.map(f=>[f.t.code,`${f.x.detail||f.x.sub||'-'}\nหมวด${f.x.cat}${f.to?' → '+FFE.CATNAME[f.to]:''} · ${fmt(f.x.amount)} บาท${f.x.itemId?'\nรหัสรายการ '+f.x.itemId:''}`,`[${LVTH[f.lv]}] ${f.msg}\n(${f.ref})`]),[13,37,50]))}
+    else empty('ไม่พบรายการที่ผิดหมวดหรือเกินอัตรา');
+  }
+  h(CHECKS[5][1]);
+  if(res.comp.length)K.push(table(['รหัส','ชื่อ','ข้อสังเกต'],res.comp.map(c=>[c.it.code||'ภาพรวม',itemName(c.it),c.iss.map(x=>`[${LVTH[x.lv]}] ${x.t}`).join('\n')]),[13,29,58]));
+  else empty('ข้อมูลครบถ้วนและถูกต้อง');
+  K.push(para('',{after:120}));
+  note('รายงานนี้สร้างจากระบบตรวจคำของบประมาณ FF เป็นผลการคัดกรองเบื้องต้นเพื่อประกอบการพิจารณาของผู้ตรวจ ไม่ใช่ผลการพิจารณาอย่างเป็นทางการ');
+  const blob=await D.Packer.toBlob(doc(K));
+  return saveFile(baseName('รายงานผลการตรวจ')+'.docx',blob);
+}
+async function exportLetterDocx(){
+  if(!needLib(window.docx,'Word'))return;
+  const {D,para,doc}=W();
+  const lines=$('letter').value.replace(/\r/g,'').split('\n'),K=[];
+  lines.forEach((ln,i)=>{
+    const lead=(ln.match(/^ */)||[''])[0].length,txt=ln.trim();
+    if(!txt){K.push(para('',{after:0}));return}
+    if(i===0){K.push(para(txt,{bold:true,size:36,center:true,after:120}));return}
+    const top=/^\d+\.\s/.test(txt)&&lead===0;
+    const sub=/^\d+\.\d+\s/.test(txt);
+    const bullet=/^-\s/.test(txt);
+    const indent=lead?Math.min(Math.round(lead/3),4)*567:0;
+    K.push(para(txt,{bold:top,indent:sub||bullet?indent+567:indent,hanging:sub||bullet?567:0,after:top?40:60,keepNext:top}));
+  });
+  const blob=await D.Packer.toBlob(doc(K));
+  return saveFile(baseName('ร่างข้อสังเกต')+'.docx',blob);
+}
+[['x-report-docx',exportReportDocx],['x-report-xlsx',exportResultsXlsx],['x-fill-xlsx',exportFillXlsx],['x-letter-docx',exportLetterDocx],['x-letter-docx2',exportLetterDocx],['x-fill-xlsx2',exportFillXlsx]]
+  .forEach(([id,fn])=>{const b=$(id);if(b)b.addEventListener('click',()=>{if(data&&res)busy(b,fn)})});
 
 /* tabs */
 let curTab='tab-result';try{curTab=localStorage.getItem(KEY+'-tab')||curTab}catch(e){}

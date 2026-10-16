@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ตรวจคำของบ FF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<style>
+/* Layout: official review sheet — file + unit bar on top, tabbed workspace below; results follow the 4 checks; fill-back tab mirrors the reviewer columns of the NRIIS sheet */
+:root{
+  --paper:#f3f6f9; --sheet:#ffffff; --ink:#17222e; --muted:#5a6878; --line:#d8dfe7;
+  --accent:#1f4e8c; --accent-soft:#e7eef8;
+  --ok:#1d7548; --ok-soft:#e3f3ea; --warn:#9a6200; --warn-soft:#fbf1dc; --bad:#b3261e; --bad-soft:#fbe6e4;
+  --plan:#efe9f8; --strength:#fbe9f2;
+  --f-display:"Noto Serif Thai","Tahoma",serif;
+  --f-body:"IBM Plex Sans Thai","Tahoma","Leelawadee UI",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"Consolas",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0f151c; --sheet:#16202a; --ink:#e3e9ef; --muted:#97a5b4; --line:#2b3745;
+  --accent:#86aee6; --accent-soft:#1c2c42;
+  --ok:#62c795; --ok-soft:#163327; --warn:#e5b154; --warn-soft:#3a2d12; --bad:#f2877c; --bad-soft:#3d1d1a;
+  --plan:#231e33; --strength:#33202b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0f151c; --sheet:#16202a; --ink:#e3e9ef; --muted:#97a5b4; --line:#2b3745;
+  --accent:#86aee6; --accent-soft:#1c2c42;
+  --ok:#62c795; --ok-soft:#163327; --warn:#e5b154; --warn-soft:#3a2d12; --bad:#f2877c; --bad-soft:#3d1d1a;
+  --plan:#231e33; --strength:#33202b; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+.wrap{max-width:1200px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.35}
+h1{font-size:1.6rem} h2{font-size:1.18rem} h3{font-size:1rem;font-family:var(--f-body);font-weight:600}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.muted{color:var(--muted)} .num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+header.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:12px}
+header.top p{margin:4px 0 0;max-width:64ch}
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:18px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.grid > *{min-width:0}
+label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted);font-weight:500}
+label.inline{flex-direction:row;align-items:center;gap:8px;color:var(--ink)}
+input,textarea,select{font:inherit;font-size:.92rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:7px 9px;width:100%}
+input[type=checkbox]{width:auto;accent-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible,.filebtn:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.span2{grid-column:1/-1}
+button,.filebtn{font:inherit;font-size:.9rem;font-weight:600;cursor:pointer;border-radius:4px;padding:8px 14px;border:1px solid var(--accent);background:var(--accent);color:var(--sheet);display:inline-flex;align-items:center;gap:6px}
+button.ghost{background:transparent;color:var(--accent)}
+button.danger{background:transparent;color:var(--bad);border-color:var(--bad)}
+.filebtn input{position:absolute;width:1px;height:1px;opacity:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.unitbar{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
+.unitbar h2{font-size:1.25rem}
+.drop{border:2px dashed var(--line);border-radius:6px;padding:16px 18px;background:var(--sheet);display:flex;flex-direction:column;gap:8px}
+.up-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.up-card{display:flex;flex-direction:column;gap:6px;min-width:0}
+.up-main{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.sub{font-size:.8rem;color:var(--muted)}
+.arrow{color:var(--accent);font-weight:600}
+.exportbar{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;padding-block:12px}
+.exportbar > div:first-child{flex:1 1 280px;min-width:0}
+.xbtn{display:inline-flex;align-items:center;gap:8px}
+.xbtn .ft{font-family:var(--f-num);font-size:.72rem;font-weight:500;padding:1px 5px;border-radius:3px;border:1px solid currentColor;opacity:.85}
+button:disabled{opacity:.6;cursor:progress}
+.up-main > div{flex:1 1 260px;min-width:0}
+.up-main svg{color:var(--accent);flex:none}
+.up-status{font-size:.88rem;color:var(--muted)}
+.up-status b{color:var(--ink)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.err{color:var(--bad);background:var(--bad-soft);padding:8px 12px;border-radius:4px}
+
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{background:transparent;color:var(--muted);border:0;border-bottom:3px solid transparent;border-radius:0;padding:10px 14px;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabbadge{display:inline-block;min-width:1.6em;padding:0 6px;border-radius:9px;background:var(--bad);color:var(--sheet);font-size:.75rem;font-family:var(--f-num)}
+
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:.78rem;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.info{background:var(--accent-soft);color:var(--accent)}
+.stats{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.stat{border-left:3px solid var(--line);padding:4px 12px}
+.stat b{display:block;font-family:var(--f-num);font-size:1.3rem;font-weight:500}
+.stat.bad{border-left-color:var(--bad)} .stat.warn{border-left-color:var(--warn)} .stat.ok{border-left-color:var(--ok)}
+.stat span{font-size:.82rem;color:var(--muted)}
+.check{display:flex;flex-direction:column;gap:12px}
+.check > header{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between}
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:.78rem;color:var(--muted);font-weight:600;background:var(--paper);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right} td.c,th.c{text-align:center}
+tr.k-plan td{background:var(--plan)} tr.k-strength td{background:var(--strength)} tr.k-unit td{background:var(--accent-soft);font-weight:600}
+tr.k-project td.t{padding-left:26px}
+.yn{font-family:var(--f-num);font-weight:600}
+.yn.N{color:var(--bad)}
+.meter{position:relative;height:8px;background:var(--paper);border:1px solid var(--line);border-radius:4px;min-width:110px}
+.meter i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--ok)}
+.meter i.bad{background:var(--bad)}
+.meter s{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+.findings{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.findings > li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:var(--sheet)}
+.findings > li > div{min-width:0}
+.findings .meta{font-size:.84rem;color:var(--muted)}
+.findings ul{margin:4px 0 0;padding-left:18px;font-size:.88rem}
+.findings ul li.bad::marker{color:var(--bad)} .findings ul li.warn::marker{color:var(--warn)}
+.cell{font-family:var(--f-num);font-size:.75rem;color:var(--muted);margin-left:6px}
+.empty{padding:10px 12px;color:var(--ok);background:var(--ok-soft);border-radius:4px;font-size:.9rem}
+#letter{min-height:520px;font-size:.95rem;line-height:1.75;background:var(--sheet)}
+.note{font-size:.84rem;color:var(--muted);max-width:78ch;margin:0}
+.spec p,.spec li{max-width:80ch}
+.spec code{font-family:var(--f-num);font-size:.85em;background:var(--accent-soft);padding:1px 5px;border-radius:3px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--sheet);padding:8px 16px;border-radius:4px;font-size:.9rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head><body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Fundamental Fund · ชีตตรวจคำขอจาก NRIIS</div>
+      <h1>ตรวจคำของบประมาณ FF</h1>
+      <p class="muted">อัปโหลดไฟล์ตรวจคำขอ (แผนงาน-โครงการ) และไฟล์รายการค่าใช้จ่าย ระบบตรวจ 6 ด้าน และร่างข้อสังเกตแจ้งหน่วยงาน</p>
+    </div>
+    <div class="row">
+      <button class="danger" id="btn-clear" type="button">ล้างข้อมูล</button>
+    </div>
+  </header>
+
+  <div id="err" class="err" hidden></div>
+  <section id="drop" class="drop" aria-label="อัปโหลดไฟล์">
+    <div class="up-grid">
+      <div class="up-card">
+        <div class="up-main">
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><b>1. ไฟล์ตรวจคำขอ (แผนงาน-โครงการ)</b><div class="note">ชีตที่มีหัวตาราง "รหัสแผนงาน/โครงการ"</div></div>
+          <label class="filebtn">เลือกไฟล์<input type="file" id="file" accept=".xlsx,.xlsm,.xls"></label>
+        </div>
+        <div class="up-status" id="up-status"></div>
+      </div>
+      <div class="up-card">
+        <div class="up-main">
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M7 4h7l4 4v12H7zM14 4v4h4M10 12h5M10 16h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><b>2. ไฟล์รายการค่าใช้จ่าย</b><div class="note">ใช้ตรวจหมวดและอัตราค่าใช้จ่ายรายรายการ (หัวตาราง "รหัสรายการ" "หมวด" "งบประมาณของรายการ")</div></div>
+          <label class="filebtn">เลือกไฟล์<input type="file" id="file2" accept=".xlsx,.xlsm,.xls"></label>
+        </div>
+        <div class="up-status" id="up-status2"></div>
+      </div>
+    </div>
+    <div class="note">ลากไฟล์มาวางที่ใดก็ได้ในหน้านี้ ระบบแยกประเภทไฟล์จากหัวตารางให้เอง · รองรับ .xlsx .xlsm .xls</div>
+  </section>
+
+  <section id="unitbox" class="sheet check" hidden>
+    <div class="unitbar">
+      <h2 id="u-title"></h2><span class="muted" id="u-meta"></span>
+    </div>
+    <div class="grid">
+      <label id="u-select-wrap" hidden>หน่วยงานในไฟล์<select id="u-select"></select></label>
+      <label>ปีงบประมาณที่เสนอขอ (พ.ศ.)<input id="o-fy" class="num" inputmode="numeric"></label>
+      <label>กำหนดส่งคำขอฉบับปรับปรุง<input id="o-deadline" placeholder="เช่น 30 ตุลาคม 2569"></label>
+      <label>กรอบงบประมาณที่ สกสว. แจ้ง (บาท)<input id="o-frame" class="num" inputmode="numeric" placeholder="เว้นว่าง = ใช้กรอบในไฟล์"></label>
+      <label class="inline" style="align-self:end"><input type="checkbox" id="o-incl"> นับงบแผนเสริมสร้างฯ รวมในงบเสนอขอรวม</label>
+      <label class="span2">คำสำคัญพันธกิจเพิ่มเติม (ไม่บังคับ คั่นด้วยจุลภาค · ระบบดึงจากเป้าประสงค์และยุทธศาสตร์หน่วยงานในไฟล์ให้แล้ว)<input id="o-mission"></label>
+      <label class="span2">ชื่อโครงการที่เคยได้รับทุนหรือยื่นแหล่งทุนอื่น (บรรทัดละ 1 โครงการ ใช้ตรวจความซ้ำซ้อนนอกคำขอนี้)<textarea id="o-prior" rows="2"></textarea></label>
+    </div>
+  </section>
+
+  <section id="exportbar" class="sheet exportbar" hidden aria-label="ออกรายงาน">
+    <div><b>ออกรายงานเป็นไฟล์ที่แก้ไขได้</b><div class="note">สร้างจากผลตรวจล่าสุดในหน้านี้ · ร่างข้อสังเกตใช้ข้อความในแท็บร่างข้อสังเกต รวมส่วนที่แก้เองแล้ว</div></div>
+    <div class="row">
+      <button class="xbtn" id="x-report-docx" type="button">รายงานผลการตรวจ <span class="ft">DOCX</span></button>
+      <button class="xbtn ghost" id="x-report-xlsx" type="button">ผลการตรวจ <span class="ft">XLSX</span></button>
+      <button class="xbtn ghost" id="x-fill-xlsx" type="button">กรอกกลับชีต <span class="ft">XLSX</span></button>
+      <button class="xbtn ghost" id="x-letter-docx" type="button">ร่างข้อสังเกต <span class="ft">DOCX</span></button>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist" id="tabs" hidden>
+    <button role="tab" id="tab-struct" aria-selected="false" data-panel="p-struct" type="button">โครงสร้างคำขอ</button>
+    <button role="tab" id="tab-result" aria-selected="true" data-panel="p-result" type="button">ผลการตรวจ <span class="tabbadge" id="badge" hidden></span></button>
+    <button role="tab" id="tab-fill" aria-selected="false" data-panel="p-fill" type="button">กรอกกลับชีต</button>
+    <button role="tab" id="tab-letter" aria-selected="false" data-panel="p-letter" type="button">ร่างข้อสังเกต</button>
+    <button role="tab" id="tab-spec" aria-selected="false" data-panel="p-spec" type="button">ตรรกะการตรวจ</button>
+  </nav>
+
+  <section id="p-struct" class="sheet check" hidden>
+    <header><h2>แผนงานและโครงการที่อ่านได้จากไฟล์</h2><span class="muted" id="file-name"></span></header>
+    <div class="tablebox"><table id="struct-table"></table></div>
+  </section>
+
+  <section id="p-result" class="check" hidden>
+    <div class="sheet stats" id="stats"></div>
+    <div class="sheet check">
+      <header><h2>1 · เป็นโครงการวิจัยและพัฒนานวัตกรรมตามพันธกิจ</h2><span id="mission-chip"></span></header>
+      <div class="tablebox"><table id="mission-table"></table></div>
+      <p class="note">คัดกรองจากคำในชื่อ วัตถุประสงค์ ผลผลิต และคำสำคัญ เทียบกับเป้าประสงค์และยุทธศาสตร์หน่วยงาน ผู้ตรวจควรอ่านยืนยันรายการ "ควรทบทวน" และ "ไม่ผ่าน" ก่อนแจ้งหน่วยงาน</p>
+    </div>
+    <div class="sheet check">
+      <header><h2>2 · ความซ้ำซ้อนของโครงการ</h2><span id="dup-chip"></span></header>
+      <ul class="findings" id="dup-list"></ul>
+    </div>
+    <div class="sheet check">
+      <header><h2>3 · สัดส่วนงบประมาณตามเกณฑ์ กสว.</h2><span id="rule-chip"></span></header>
+      <p class="note" id="rule-note"></p>
+      <div class="tablebox"><table id="rule-table"></table></div>
+    </div>
+    <div class="sheet check">
+      <header><h2>4 · ยอดงบแผนงาน โครงการ และกรอบงบประมาณ</h2><span id="bud-chip"></span></header>
+      <div class="tablebox"><table id="frame-table"></table></div>
+      <div class="tablebox"><table id="plan-table"></table></div>
+      <ul class="findings" id="bud-list"></ul>
+    </div>
+    <div class="sheet check">
+      <header><h2>5 · หมวดและอัตราค่าใช้จ่ายรายรายการ</h2><span id="exp-chip"></span></header>
+      <div id="exp-body" class="check"></div>
+    </div>
+    <div class="sheet check">
+      <header><h2>6 · ความครบถ้วนและถูกต้องของข้อมูล</h2><span id="comp-chip"></span></header>
+      <ul class="findings" id="comp-list"></ul>
+    </div>
+  </section>
+
+  <section id="p-fill" class="sheet check" hidden>
+    <header><h2>ผลสำหรับกรอกกลับชีตตรวจคำขอ</h2></header>
+    <p class="note">ค่า Y/N เป็นข้อเสนอจากระบบ ผู้ตรวจควรทบทวนก่อนวาง ปุ่มคัดลอกจะคัดลอกทุกแถวตั้งแต่แถวแรกของข้อมูลเรียงตรงกับแถวในไฟล์ (แถวแผนงานและหน่วยงานเป็นช่องว่าง) เลือกเซลล์ตามที่ระบุในไฟล์ต้นฉบับแล้ววาง</p>
+    <div class="row">
+      <button class="xbtn" id="x-fill-xlsx2" type="button">ดาวน์โหลด <span class="ft">XLSX</span></button>
+      <button class="ghost" id="btn-copy-stu" type="button">คัดลอก 2.4–2.6</button><span class="note" id="hint-stu"></span>
+    </div>
+    <div class="row">
+      <button class="ghost" id="btn-copy-notes" type="button">คัดลอกหมายเหตุและข้อสังเกต</button><span class="note" id="hint-notes"></span>
+    </div>
+    <div class="tablebox"><table id="fill-table"></table></div>
+  </section>
+
+  <section id="p-letter" class="check" hidden>
+    <div class="row" style="justify-content:space-between">
+      <h2>ร่างข้อสังเกตถึงหน่วยงาน</h2>
+      <div class="row"><button class="ghost" id="btn-regen" type="button">สร้างร่างใหม่จากผลตรวจล่าสุด</button><button class="ghost" id="btn-copy" type="button">คัดลอกข้อความ</button><button class="xbtn" id="x-letter-docx2" type="button">ดาวน์โหลด <span class="ft">DOCX</span></button></div>
+    </div>
+    <p class="note">แก้ไขข้อความในกล่องได้โดยตรง กด "สร้างร่างใหม่" เมื่อเปลี่ยนไฟล์หรือการตั้งค่า (ข้อความที่แก้เองจะถูกแทนที่)</p>
+    <textarea id="letter" aria-label="ร่างข้อสังเกต"></textarea>
+  </section>
+
+  <section id="p-spec" class="sheet spec check" hidden>
+    <h2>ตรรกะการตรวจ</h2>
+    <h3>การอ่านไฟล์</h3>
+    <ul>
+      <li>หาแถวหัวตารางจากเซลล์ "รหัสแผนงาน/โครงการ" แล้วจับคู่คอลัมน์จากข้อความหัวตาราง จึงยังอ่านได้แม้ลำดับคอลัมน์เปลี่ยน</li>
+      <li>แถวไม่มีรหัสแต่มีงบ = แถวรวมหน่วยงาน · แถวมีรหัสและมีงบแผนงาน = แผนงาน (ถ้ามีกรอบงบหรือชื่อขึ้นต้น "แผนงานเสริมสร้างความเข้มแข็ง" = แผนเสริมสร้างฯ) · แถวมีรหัสแต่ไม่มีงบแผนงาน = โครงการภายใต้แผนงานที่อยู่ก่อนหน้า</li>
+      <li>ปีงบประมาณอ่านจากหัวตาราง "งบ...ปี 70" และแก้ได้ในช่องปีงบประมาณ</li>
+    </ul>
+    <h3>ด้าน 1 · งานวิจัยตามพันธกิจ (2.4, 2.5)</h3>
+    <ul>
+      <li>คำพันธกิจ = คำสำคัญของโครงการในหน่วยงานที่ปรากฏในเป้าประสงค์/ยุทธศาสตร์หน่วยงาน (ตัดคำทั่วไป เช่น นวัตกรรม วิจัย) รวมกับคำที่ผู้ตรวจเพิ่ม · 2.4 = Y เมื่อพบคำพันธกิจในชื่อ วัตถุประสงค์ ผลผลิต หรือคำสำคัญ</li>
+      <li><b>ไม่ผ่าน</b> พบคำบ่งชี้งานไม่ใช่วิจัย (อบรม สัมมนา ก่อสร้าง จัดซื้อ จ้างเหมา บริการวิชาการ ฯลฯ) และคำบ่งชี้งานวิจัยน้อยกว่า 2 คำ · 2.5 = N เฉพาะกรณีนี้</li>
+    </ul>
+    <h3>ด้าน 2 · ความซ้ำซ้อน (2.6)</h3>
+    <ul>
+      <li>เทียบทุกคู่โครงการด้วย character trigram (Dice) ของชื่อ และของชื่อ+วัตถุประสงค์+คำสำคัญ ตัดคำทั่วไปและ trigram ที่พบในเกินครึ่งของโครงการในหน่วยงาน (เช่น "พื้นที่สูง") เพื่อไม่ให้ทุกโครงการคล้ายกันเพราะบริบทเดียวกัน</li>
+      <li>≥ 0.60 ซ้ำซ้อนสูง (2.6 = Y) · 0.45–0.59 ควรตรวจสอบ · เทียบกับรายชื่อโครงการเดิมที่ผู้ตรวจใส่ · เตือนเมื่อระบุว่ายื่นแหล่งทุนอื่น หรือหัวหน้าคนเดียวมากกว่า 3 โครงการ</li>
+    </ul>
+    <h3>ด้าน 3 · สัดส่วนงบประมาณ</h3>
+    <ul>
+      <li>งบเสนอขอรวม T = ผลรวมงบแผนงานวิจัยและนวัตกรรม + งบแผนเสริมสร้างฯ (ปิดได้ด้วยตัวเลือกด้านบน) · ตัวเศษรวมจากแถวโครงการ (และแผนเสริมสร้างฯ เมื่อนับรวม)</li>
+      <li>ค่าจ้าง ≤ 30% · สาธารณูปโภค ≤ 1% · ซ่อมแซมครุภัณฑ์/สอบเทียบ ≤ 10% · ครุภัณฑ์ ≤ 20% · ซ่อมแซม + ครุภัณฑ์ ≤ 20% · ต่างประเทศ 5% / 4% / 3% และ ≤ 20 ลบ. ตามวงเงิน (25 ลบ. พอดีนับเป็นช่วง 25–150) · เสริมสร้างฯ ≤ 5% และ ≤ 5 ลบ.</li>
+      <li>ยอดที่ต้องลดขั้นต่ำ <code>r = (A − pT) / (1 − p)</code> เพราะการลดหมวดใดทำให้ T ลดด้วย ถ้ามีเพดานเป็นเงิน C ใช้ค่าที่มากกว่าระหว่าง r กับ <code>A − C</code></li>
+    </ul>
+<h3>ด้าน 4 · ยอดงบแผนงาน โครงการ และกรอบงบประมาณ</h3>
+    <ul>
+      <li>งบประมาณของแผนงาน = ผลรวมงบเสนอขอของโครงการภายใต้แผนงานนั้น ทั้งยอดรวมและรายหมวด</li>
+      <li>ผลรวมงบทุกแผนงาน รวมแผนเสริมสร้างฯ = กรอบงบประมาณที่ สกสว. แจ้ง ต้องเท่ากันพอดี (ค่าเริ่มต้นคือกรอบงบวิจัยฯ ในแถวหน่วยงาน + กรอบแผนเสริมสร้างฯ จากไฟล์ แก้ได้ในช่องกรอบงบประมาณ)</li>
+      <li>ยอดระดับหน่วยงานเท่ากับผลรวมแผนงาน, ช่อง Y Z AA ต้องตรงกัน, ผลรวมรายหมวดเท่ากับยอดรวม, ผลรวมโครงการ MY</li>
+    </ul>
+    <h3>ด้าน 5 · หมวดและอัตราค่าใช้จ่ายรายรายการ (อ้างอิงคู่มือ FF บทที่ 2)</h3>
+    <ul>
+      <li>รวมรายการตามรหัสโครงการ ใช้เฉพาะรายการของ "ปีที่" = ปีงบประมาณ − ปีเริ่ม + 1 แล้วเทียบกับงบเสนอขอและงบรายหมวดในไฟล์ตรวจคำขอ</li>
+      <li><b>ผิดหมวด:</b> สิ่งของคงทน (เครื่องคอมพิวเตอร์ โน้ตบุ๊ก แท็บเล็ต เครื่องพิมพ์ กล้อง เครื่องชั่ง ตู้เย็น ฯลฯ) ในค่าวัสดุ → ค่าครุภัณฑ์ (ข้อ 1.3, 1.4) · วัสดุคอมพิวเตอร์/โปรแกรมราคาต่อหน่วยเกิน 20,000 บาท → ค่าครุภัณฑ์ (ข้อ 1.3 (9)(10)) · ซ่อม/บำรุงรักษา/สอบเทียบในค่าใช้สอย → ค่าซ่อมแซมครุภัณฑ์ (ข้อ 1.2 (22)) · จ้างเหมา/บริการในหมวดค่าจ้าง → ค่าใช้สอย (ข้อ 1.1) · ค่าก่อสร้าง/ปรับปรุงสิ่งก่อสร้างไม่สนับสนุน · ครุภัณฑ์คอมพิวเตอร์/โปรแกรมต้องใช้เพื่อการคำนวณขั้นสูงหรือข้อมูลปริมาณมาก (ข้อ 1.4 (6)) · รายละเอียดไม่ตรงหมวดย่อย</li>
+      <li><b>อัตรา:</b> ค่าจ้าง ป.เอก 30,000 / ป.โท 25,000 / ป.ตรี 18,000 / ปวส. 12,500 / ปวช. 11,000 บาทต่อเดือน · OT วันทำการ 50 บาท/ชม. ไม่เกิน 4 ชม. วันหยุด 60 บาท/ชม. ไม่เกิน 7 ชม. · วิทยากร ≤ 1,200 บาท/ชม. · เบี้ยเลี้ยง ≤ 400 บาท/วัน · ที่พัก ≤ 2,000 บาท/คืน · อาหารประชุม ≤ 1,000 บาท/วัน/คน · รถพร้อมคนขับ ≤ 2,500 บาท/วัน · รถยนต์ ≤ 6 บาท/กม. · ต่างประเทศ เบี้ยเลี้ยง ≤ 2,500 บาท/วัน ที่พัก ≤ 10,500 บาท/คืน (ตรวจได้เมื่อหน่วยนับเป็นวันหรือคืน มิฉะนั้นแจ้งให้แสดงจำนวนวัน)</li>
+      <li>แผนเสริมสร้างฯ ไม่สนับสนุนครุภัณฑ์ ค่าเดินทางต่างประเทศ ค่าพัฒนาระบบสารสนเทศใหม่ และค่าประเมินผลลัพธ์/ผลกระทบ (ข้อ 2.5) · ตัวคูณ จำนวน × คน × ครั้ง × ราคา ต้องเท่ากับงบของรายการ · รายการซ้ำ (หมวด หมวดย่อย และรายละเอียดเดียวกัน)</li>
+    </ul>
+    <h3>ด้าน 6 · ความครบถ้วนและถูกต้อง</h3>
+    <ul>
+      <li>ปีและระยะเวลา: โครงการใหม่เริ่มปีที่เสนอขอ, ต่อเนื่องเริ่มก่อน, ระยะเวลา = ปีสิ้นสุด − ปีเริ่ม + 1, MY สอดคล้องกับระยะเวลา, ต่อเนื่องควรระบุรหัส/ชื่อปีก่อน</li>
+      <li>ช่องบังคับของโครงการ, ยุทธศาสตร์ ววน. 1–4 ของแผนงาน, สังกัดหัวหน้าโครงการต้องเป็นหน่วยงานที่ยื่น, ข้อความที่มีแท็ก HTML ปน</li>
+      <li>ครุภัณฑ์: มีงบต้องมีชื่อรายการและข้อมูลใบเสนอราคา 3 ราย, ครุภัณฑ์ประเภทจัดจ้างทำได้เฉพาะฐานข้อมูล แอปพลิเคชัน เว็บไซต์ · ค่าเดินทางต่างประเทศเกินร้อยละ 20 ของงบโครงการให้ชี้แจง</li>
+    </ul>
+    <p class="note">ไฟล์ที่เปิดอ่านในเบราว์เซอร์ของผู้ใช้เท่านั้น ไม่ส่งออกไปที่ใด</p>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* FF request checking engine — pure functions, no DOM. Used by the page and by tests. */
+const FFE=(()=>{
+const M=1e6;
+const CATS=[['wage','ค่าจ้าง'],['material','ค่าวัสดุ'],['operate','ค่าใช้สอย'],['util','ค่าสาธารณูปโภค'],['foreign','ค่าเดินทางต่างประเทศ'],['repair','ค่าซ่อมแซมครุภัณฑ์'],['equip','ค่าครุภัณฑ์']];
+const clean=s=>String(s??'').replace(/\s+/g,' ').trim();
+const COLS=[
+ ['code',h=>h.startsWith('รหัสแผนงาน/โครงการ')],
+ ['priority',h=>h.startsWith('2.1')],
+ ['title',h=>h==='ชื่อโครงการ'],
+ ['type',h=>h.startsWith('ลักษณะแผนงาน')],
+ ['startFY',h=>h.startsWith('ปีงบประมาณที่เริ่ม')],
+ ['endFY',h=>h.startsWith('ปีงบประมาณที่สิ้นสุด')],
+ ['years',h=>h.startsWith('ระยะเวลา')&&h.includes('(ปี)')],
+ ['months',h=>h.startsWith('ระยะเวลา')&&h.includes('(เดือน)')],
+ ['my',h=>h.startsWith('2.2')],
+ ['unitStrategy',h=>h==='ยุทธศาสตร์หน่วยงาน'],
+ ['strat',h=>h.startsWith('2.3.1')],
+ ['nplan',h=>h.startsWith('2.3.2')],
+ ['S',h=>h.startsWith('2.4')],['T',h=>h.startsWith('2.5')],['U',h=>h.startsWith('2.6')],
+ ['focus12',h=>h.startsWith('2.7.1')],['focus36',h=>h.startsWith('2.7.2')],
+ ['frame',h=>h.startsWith('กรอบงบ')],
+ ['Y',h=>h.startsWith('งบวิจัยและนวัตกรรมรายหน่วยงาน')],
+ ['Z',h=>h.startsWith('งบเสนอขอ')&&h.includes('งบเสนอขอของโครงการ')],
+ ['AA',h=>h.startsWith('งบเสนอขอ')&&h.includes('งบรายหมวด')],
+ ['wage',h=>h==='ค่าจ้าง'],['material',h=>h==='ค่าวัสดุ'],['operate',h=>h==='ค่าใช้สอย'],['util',h=>h==='ค่าสาธารณูปโภค'],
+ ['foreign',h=>h==='ค่าเดินทางต่างประเทศ'],['repair',h=>h.startsWith('ค่าซ่อมแซมครุภัณฑ์')],['equip',h=>/^ค่าครุภัณฑ์( \d+)?$/.test(h)],
+ ['equipName',h=>h.startsWith('ชื่อครุภัณฑ์')],['equipNote',h=>h.startsWith('2.9')],
+ ['lead',h=>h==='หัวหน้าโครงการ'],['newLead',h=>h.startsWith('หัวหน้าโครงการเป็นนักวิจัยใหม่')],
+ ['newCount',h=>h.startsWith('จำนวนนักวิจัยใหม่')],['leadAff',h=>h.startsWith('สังกัดหัวหน้าโครงการ')],
+ ['objective',h=>h.startsWith('วัตถุประสงค์')],['output',h=>h.startsWith('ผลผลิต')],
+ ['goal',h=>h.startsWith('เป้าประสงค์ของหน่วยงาน')],
+ ['prevCode',h=>h.startsWith('รหัสโครงการ (ปีก่อนหน้า)')],['prevName',h=>h.startsWith('ชื่อโครงการ (ปีก่อนหน้า)')],
+ ['external',h=>h.startsWith('โครงการยื่นเสนอขอรับทุนจากหน่วยงานอื่น')],
+ ['oecd',h=>h.startsWith('สาขา OECD หลัก')],['kwTh',h=>h.startsWith('คำสำคัญ (ภาษาไทย)')],
+ ['ministry',h=>h==='กระทรวง'],['unitName',h=>h==='หน่วยงาน'],['unitType',h=>h==='ประเภทหน่วยงาน']
+];
+const LETTER=i=>{let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s};
+const num=v=>{if(typeof v==='number')return v;const x=parseFloat(String(v??'').replace(/[, ]/g,''));return isFinite(x)?x:0};
+const has=v=>clean(v)!==''&&clean(v)!=='-';
+const hasNum=v=>clean(v)!==''&&isFinite(parseFloat(String(v).replace(/[, ]/g,'')));
+
+function parse(rows){
+  const hi=rows.findIndex(r=>r.some(c=>clean(c).startsWith('รหัสแผนงาน/โครงการ')));
+  if(hi<0)throw new Error('ไม่พบหัวตาราง "รหัสแผนงาน/โครงการ" ในไฟล์ ตรวจว่าเลือกชีตตรวจคำขอที่ถูกต้อง');
+  const hdr=rows[hi].map(clean),col={},colLetter={};
+  hdr.forEach((h,i)=>{for(const [k,f] of COLS){if(f(h)){if(k==='unitName'){(col.unitNames=col.unitNames||[]).push(i)}else if(col[k]===undefined)col[k]=i}}});
+  Object.entries(col).forEach(([k,i])=>{if(!Array.isArray(i))colLetter[k]=LETTER(i)});
+  const missing=['code','title','Z','AA','wage','equip'].filter(k=>col[k]===undefined);
+  if(missing.length)throw new Error('ไม่พบคอลัมน์ที่จำเป็น: '+missing.join(', '));
+  let fy=0;const m=clean(hdr[col.Y]||hdr[col.Z]||'').match(/ปี\s*(\d{2,4})/);if(m)fy=m[1].length===2?2500+ +m[1]:+m[1];
+  const g=(r,k)=>col[k]===undefined?'':r[col[k]];
+  const units={},order=[];
+  let curUnit=null,curPlan=null;
+  for(let ri=hi+1;ri<rows.length;ri++){
+    const r=rows[ri];if(!r||!r.some(c=>clean(c)!==''))continue;
+    const uname=(col.unitNames||[]).map(i=>clean(r[i])).find(Boolean)||'';
+    if(uname&&(!curUnit||curUnit.name!==uname)){
+      curUnit=units[uname]||(units[uname]={name:uname,ministry:'',unitType:'',unitRow:null,items:[]});
+      if(!order.includes(uname))order.push(uname);curPlan=null;
+    }
+    if(!curUnit)continue;
+    if(clean(g(r,'ministry')))curUnit.ministry=clean(g(r,'ministry'));
+    if(clean(g(r,'unitType')))curUnit.unitType=clean(g(r,'unitType'));
+    const it={row:ri+1,code:clean(g(r,'code')),priority:clean(g(r,'priority')),title:clean(g(r,'title')),type:clean(g(r,'type')),
+      startFY:clean(g(r,'startFY')),endFY:clean(g(r,'endFY')),years:clean(g(r,'years')),months:clean(g(r,'months')),my:clean(g(r,'my')).toUpperCase(),
+      unitStrategy:clean(g(r,'unitStrategy')),strat:clean(g(r,'strat')),nplan:clean(g(r,'nplan')),focus12:clean(g(r,'focus12')),focus36:clean(g(r,'focus36')),
+      frame:g(r,'frame'),Y:g(r,'Y'),Z:g(r,'Z'),AA:g(r,'AA'),b:{},
+      equipName:clean(g(r,'equipName')),equipNote:clean(g(r,'equipNote')),lead:clean(g(r,'lead')),newLead:clean(g(r,'newLead')).toUpperCase(),newCount:clean(g(r,'newCount')),
+      leadAff:clean(g(r,'leadAff')),objective:clean(g(r,'objective')),output:clean(g(r,'output')),goal:clean(g(r,'goal')),
+      prevCode:clean(g(r,'prevCode')),prevName:clean(g(r,'prevName')),external:clean(g(r,'external')),oecd:clean(g(r,'oecd')),kwTh:clean(g(r,'kwTh'))};
+    CATS.forEach(([k])=>it.b[k]=num(g(r,k)));
+    if(!it.code){ if(hasNum(it.Y)||hasNum(it.frame)){it.kind='unit';curUnit.unitRow=it} continue; }
+    if(hasNum(it.Y)){
+      it.kind=(hasNum(it.frame)||/^แผนงานเสริมสร้างความเข้มแข็ง/.test(it.title))?'strength':'plan';
+      it.children=[];curPlan=it;
+    }else{it.kind='project';it.parent=curPlan;if(curPlan)curPlan.children.push(it)}
+    curUnit.items.push(it);
+  }
+  if(!order.length)throw new Error('ไม่พบข้อมูลหน่วยงานในไฟล์');
+  return{fy,col:colLetter,units:order.map(n=>units[n])};
+}
+
+/* ---------- helpers ---------- */
+const sumB=it=>CATS.reduce((s,[k])=>s+it.b[k],0);
+const fmt=n=>Math.round(n).toLocaleString('th-TH');
+const pct=n=>(n*100).toFixed(2);
+const RD=['วิจัย','พัฒนา','นวัตกรรม','ต้นแบบ','ทดลอง','ทดสอบ','สังเคราะห์','วิเคราะห์','ออกแบบ','องค์ความรู้','กลไก','แบบจำลอง','เทคโนโลยี','สิทธิบัตร','ตีพิมพ์','ปรับปรุงพันธุ์','คัดเลือกพันธุ์','ประเมิน'];
+const NON=['อบรม','สัมมนา','ประชุม','จัดงาน','ศึกษาดูงาน','ก่อสร้าง','ปรับปรุงอาคาร','ปรับปรุงห้อง','จัดซื้อ','จ้างเหมา','บริการวิชาการ','งานประจำ','ประชาสัมพันธ์','ค่ายวิชาการ'];
+const STOP=['โครงการ','การวิจัยและพัฒนา','การพัฒนา','การวิจัย','การศึกษา','สำหรับ','เพื่อ','และ'];
+function norm(s){s=String(s||'').toLowerCase();STOP.forEach(w=>{s=s.split(w).join('')});return s.replace(/[\s\-–—_.,;:()"'“”\/0-9]/g,'')}
+function grams(s){const g=new Set();for(let i=0;i<s.length-2;i++)g.add(s.slice(i,i+3));return g}
+function dice(A,B){if(!A.size||!B.size)return 0;let i=0;A.forEach(x=>{if(B.has(x))i++});return 2*i/(A.size+B.size)}
+const HTMLJUNK=/\/p(\s|$)|(^|\s)p\d+\.|&[a-z]+;|<\/?[a-z]+[^>]*>/i;
+const isY=v=>/^y/i.test(v),isN=v=>/^n/i.test(v);
+
+function analyze(unit,opt){
+  opt=opt||{};const FY=+opt.fy||0;
+  const items=unit.items,plans=items.filter(i=>i.kind==='plan'),strengths=items.filter(i=>i.kind==='strength'),projects=items.filter(i=>i.kind==='project');
+  const researchLeaves=[...projects.filter(p=>p.parent&&p.parent.kind==='plan'||!p.parent),...plans.filter(p=>!p.children.length)];
+  const strengthTotal=strengths.reduce((s,p)=>s+num(p.Y),0);
+  const researchTotal=plans.length?plans.reduce((s,p)=>s+num(p.Y),0):projects.reduce((s,p)=>s+num(p.AA),0);
+  const inclS=opt.includeStrength!==false;
+  const T=researchTotal+(inclS?strengthTotal:0);
+  const leaves=[...researchLeaves,...(inclS?strengths:[])];
+  const catSum=k=>leaves.reduce((s,it)=>s+it.b[k],0);
+
+  /* rule check */
+  let fp,fc,ft;
+  if(T<25*M){fp=.05;fc=Infinity;ft='ไม่เกินร้อยละ 5 (วงเงินน้อยกว่า 25 ล้านบาท)'}
+  else if(T<=150*M){fp=.04;fc=Infinity;ft='ไม่เกินร้อยละ 4 (วงเงิน 25–150 ล้านบาท)'}
+  else{fp=.03;fc=20*M;ft='ไม่เกินร้อยละ 3 และไม่เกิน 20 ล้านบาท (วงเงินมากกว่า 150 ล้านบาท)'}
+  const R=[
+    {no:1,label:'ค่าจ้าง',keys:['wage'],p:.30,c:Infinity,txt:'ไม่เกินร้อยละ 30'},
+    {no:2,label:'ค่าสาธารณูปโภค',keys:['util'],p:.01,c:Infinity,txt:'ไม่เกินร้อยละ 1'},
+    {no:3,label:'ค่าซ่อมแซมครุภัณฑ์และสอบเทียบเครื่องมือ',keys:['repair'],p:.10,c:Infinity,txt:'ไม่เกินร้อยละ 10'},
+    {no:4,label:'ค่าครุภัณฑ์',keys:['equip'],p:.20,c:Infinity,txt:'ไม่เกินร้อยละ 20'},
+    {no:5,label:'ค่าซ่อมแซม/สอบเทียบ + ค่าครุภัณฑ์',keys:['repair','equip'],p:.20,c:Infinity,txt:'ไม่เกินร้อยละ 20'},
+    {no:6,label:'ค่าเดินทางต่างประเทศ',keys:['foreign'],p:fp,c:fc,txt:ft},
+    {no:7,label:'งบเสริมสร้างความเข้มแข็งฯ',keys:null,p:.05,c:5*M,txt:'ไม่เกินร้อยละ 5 และไม่เกิน 5 ล้านบาท'}
+  ];
+  R.forEach(r=>{
+    r.amt=r.keys?r.keys.reduce((s,k)=>s+catSum(k),0):strengthTotal;
+    r.cap=Math.min(r.p*T,r.c);r.share=T?r.amt/T:0;
+    r.fail=T>0&&r.amt>r.cap+0.5;
+    const denom=(r.keys||inclS)?(1-r.p):1;
+    r.cut=r.fail?Math.ceil(Math.max((r.amt-r.p*T)/denom,r.c===Infinity?0:r.amt-r.c)):0;
+    r.headroom=r.fail?0:r.cap-r.amt;
+    r.top=r.keys?leaves.map(it=>({it,v:r.keys.reduce((s,k)=>s+it.b[k],0)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,3):strengths.map(it=>({it,v:num(it.Y)}));
+  });
+
+  /* mission */
+  const missionText=(unit.name+' '+items.map(i=>i.goal+' '+i.unitStrategy).join(' ')).toLowerCase();
+  const extraKw=String(opt.mission||'').split(/[,\n]/).map(s=>s.trim().toLowerCase()).filter(Boolean);
+  /* mission vocabulary = project keywords (any project of the unit) that occur in the unit's goal/strategy text, plus reviewer keywords */
+  const kwOf=p=>p.kwTh.split(/[,，]/).map(s=>s.trim().toLowerCase()).filter(k=>k.length>2);
+  const GENERIC=new Set([...RD,'วิทยาศาสตร์','ยั่งยืน','เศรษฐกิจ','สังคม','สิ่งแวดล้อม','ชุมชน']);
+  const vocab=[...new Set([...projects.flatMap(kwOf).filter(k=>!GENERIC.has(k)&&missionText.includes(k)),...extraKw])];
+  const mis=projects.map(p=>{
+    const txt=(p.title+' '+p.objective+' '+p.output).toLowerCase();
+    const rd=RD.filter(w=>txt.includes(w)),non=NON.filter(w=>(p.title+' '+p.objective).toLowerCase().includes(w));
+    const own=(txt+' '+p.kwTh.toLowerCase());
+    const mk=vocab.filter(k=>own.includes(k));
+    let lv,why;
+    if(non.length&&rd.length<2){lv='bad';why='มีลักษณะเป็นกิจกรรม ('+non.join(', ')+') ไม่ใช่โครงการวิจัยและพัฒนานวัตกรรม'}
+    else if(!mk.length){lv='warn';why='ไม่พบความเชื่อมโยงระหว่างคำสำคัญของโครงการกับเป้าประสงค์/ยุทธศาสตร์ของหน่วยงาน'}
+    else if(rd.length<2){lv='warn';why='คำบ่งชี้กิจกรรมวิจัยในชื่อ วัตถุประสงค์ และผลผลิตมีน้อย'}
+    else if(non.length){lv='warn';why='มีองค์ประกอบกิจกรรมที่ไม่ใช่วิจัยปนอยู่ ('+non.join(', ')+')'}
+    else{lv='ok';why='สอดคล้องกับพันธกิจและมีลักษณะงานวิจัยและพัฒนา'}
+    return{p,rd,non,mk,lv,why,S:mk.length?'Y':'N',T:lv==='bad'?'N':'Y'};
+  });
+
+  /* duplication — trigrams common to most projects of this unit (e.g. "พื้นที่สูง") are ignored */
+  const docText=p=>p.title+' '+p.objective+' '+p.kwTh;
+  const raw=projects.map(p=>({title:grams(norm(p.title)),full:grams(norm(docText(p)))}));
+  const df={};raw.forEach(g=>g.full.forEach(x=>df[x]=(df[x]||0)+1));
+  const N=projects.length,cut=N>=4?N*0.5:Infinity;
+  const strip=s=>new Set([...s].filter(x=>(df[x]||0)<=cut));
+  const G=raw.map(g=>({title:strip(g.title),full:strip(g.full)}));
+  const dup=[];
+  for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
+    const s=Math.max(dice(G[i].title,G[j].title),dice(G[i].full,G[j].full));
+    if(s>=.45)dup.push({kind:'pair',a:projects[i],b:projects[j],s,lv:s>=.6?'bad':'warn',sameLead:projects[i].lead&&projects[i].lead===projects[j].lead});
+  }
+  String(opt.prior||'').split('\n').map(s=>s.trim()).filter(Boolean).forEach(q=>{
+    const Q=strip(grams(norm(q)));projects.forEach((p,i)=>{const s=dice(G[i].title,Q);if(s>=.45&&!(p.prevName&&norm(p.prevName)===norm(q)))dup.push({kind:'prior',a:p,q,s,lv:s>=.6?'bad':'warn'})});
+  });
+  projects.forEach(p=>{if(has(p.external)&&!/ไม่มี/.test(p.external))dup.push({kind:'external',a:p,lv:'warn',s:0,txt:p.external})});
+  const leads={};projects.forEach(p=>{if(p.lead)(leads[p.lead]=leads[p.lead]||[]).push(p)});
+  Object.entries(leads).forEach(([l,ps])=>{if(ps.length>3)dup.push({kind:'lead',lead:l,ps,lv:'warn',s:0})});
+  dup.sort((x,y)=>(y.lv==='bad')-(x.lv==='bad')||y.s-x.s);
+  mis.forEach(m=>{m.U=dup.some(d=>d.lv==='bad'&&(d.a===m.p||d.b===m.p))?'Y':'N'});
+
+  /* budget totals: plan = sum of its projects; all plans (incl. strengthening) = frame notified by TSRI */
+  const bud=[],comp=[];
+  const mk=list=>(it,lv,t,field)=>{let c=list.find(x=>x.it===it);if(!c)list.push(c={it,iss:[]});c.iss.push({lv,t,field})};
+  const addB=mk(bud),add=mk(comp);
+  const diff=(a,b)=>Math.abs(num(a)-num(b))>1;
+  const U=unit.unitRow;
+  const planTotal=researchTotal+strengthTotal;
+  const fileFrame=(U&&hasNum(U.frame)?num(U.frame):0)+strengths.reduce((s,p)=>s+(hasNum(p.frame)?num(p.frame):0),0);
+  const frame=num(opt.frame)>0?num(opt.frame):fileFrame;
+  const frameSrc=num(opt.frame)>0?'ระบุโดยผู้ตรวจ':'จากไฟล์ (กรอบงบวิจัยฯ + กรอบแผนเสริมสร้างฯ)';
+  const budget={frame,frameSrc,planTotal,researchTotal,strengthTotal,frameOk:frame>0&&!diff(planTotal,frame),
+    researchFrame:U&&hasNum(U.frame)?num(U.frame):null,strengthFrame:strengths.length&&strengths.some(p=>hasNum(p.frame))?strengths.reduce((s,p)=>s+num(p.frame),0):null,
+    plans:[...plans,...strengths].map(p=>{const cs=p.children?p.children.reduce((s,c)=>s+num(c.AA),0):0;return{p,Y:num(p.Y),childSum:cs,n:p.children?p.children.length:0,ok:!p.children||!p.children.length||!diff(p.Y,cs)}})};
+  if(!frame)addB(U||items[0],'warn','ไม่พบกรอบงบประมาณที่ สกสว. แจ้ง ระบุกรอบในช่องตั้งค่าเพื่อตรวจยอดรวม','frame');
+  else if(diff(planTotal,frame))addB(U||items[0],'bad',`งบประมาณรวมทุกแผนงาน (รวมแผนเสริมสร้างฯ) ${fmt(planTotal)} บาท ${planTotal>frame?'สูงกว่า':'ต่ำกว่า'}กรอบงบประมาณที่ สกสว. แจ้ง ${fmt(frame)} บาท อยู่ ${fmt(Math.abs(planTotal-frame))} บาท`,'Y');
+  if(U){
+    if(hasNum(U.Y)&&diff(U.Y,researchTotal))addB(U,'bad',`งบวิจัยและนวัตกรรมระดับหน่วยงาน ${fmt(num(U.Y))} บาท ไม่เท่ากับผลรวมงบแผนงาน ${fmt(researchTotal)} บาท`,'Y');
+    if(budget.researchFrame!==null&&diff(researchTotal,budget.researchFrame)&&!num(opt.frame))addB(U,'bad',`ผลรวมงบแผนงานวิจัยและนวัตกรรม ${fmt(researchTotal)} บาท ไม่เท่ากับกรอบงบวิจัยและนวัตกรรม ${fmt(budget.researchFrame)} บาท`,'frame');
+    CATS.forEach(([k,l])=>{const s=plans.reduce((a,p)=>a+p.b[k],0);if(plans.length&&Math.abs(U.b[k]-s)>1)addB(U,'bad',`${l} ระดับหน่วยงาน ${fmt(U.b[k])} บาท ไม่เท่ากับผลรวมของแผนงาน ${fmt(s)} บาท`,k)});
+    const mySum=projects.filter(p=>isY(p.my)).reduce((s,p)=>s+num(p.AA),0);
+    if(hasNum(U.my)&&diff(U.my,mySum))addB(U,'warn',`ผลรวมงบโครงการ MY ระดับหน่วยงาน ${fmt(num(U.my))} บาท ไม่ตรงกับผลรวมโครงการที่ระบุ MY = Y (${fmt(mySum)} บาท)`,'my');
+  }
+  [...plans,...strengths].forEach(p=>{
+    if(!p.title)add(p,'bad','ไม่ได้กรอกชื่อแผนงาน','title');
+    if(p.children&&p.children.length){
+      const zs=p.children.reduce((s,c)=>s+num(c.AA),0);
+      if(diff(p.Y,zs))addB(p,'bad',`งบแผนงาน ${fmt(num(p.Y))} บาท ไม่เท่ากับผลรวมงบโครงการภายใต้แผน ${fmt(zs)} บาท (ต่าง ${fmt(num(p.Y)-zs)} บาท)`,'Y');
+      else if(diff(p.Z,zs))addB(p,'bad',`ช่องผลรวมจากโครงการกรอก ${fmt(num(p.Z))} บาท ไม่เท่ากับผลบวกงบโครงการจริง ${fmt(zs)} บาท`,'Z');
+      CATS.forEach(([k,l])=>{const s=p.children.reduce((a,c)=>a+c.b[k],0);if(Math.abs(p.b[k]-s)>1)addB(p,'bad',`${l} ของแผนงาน ${fmt(p.b[k])} บาท ไม่เท่ากับผลรวมของโครงการ ${fmt(s)} บาท`,k)});
+    }else if(diff(p.Y,p.Z))addB(p,'bad',`งบแผนงาน ${fmt(num(p.Y))} บาท ไม่เท่ากับช่องผลรวมจากโครงการ ${fmt(num(p.Z))} บาท`,'Z');
+    if(diff(p.Y,p.AA))addB(p,'bad',`งบแผนงาน ${fmt(num(p.Y))} บาท ไม่เท่ากับผลรวมรายหมวด ${fmt(num(p.AA))} บาท`,'AA');
+    if(diff(p.AA,sumB(p)))addB(p,'bad',`ผลรวมรายหมวดที่กรอก ${fmt(num(p.AA))} บาท ไม่เท่ากับผลบวกงบรายหมวดจริง ${fmt(sumB(p))} บาท`,'AA');
+    if(p.kind==='strength'){
+      if(p.b.equip>0)add(p,'bad',`แผนเสริมสร้างฯ มีค่าครุภัณฑ์ ${fmt(p.b.equip)} บาท ซึ่งไม่สนับสนุน (คู่มือ FF บทที่ 2 ข้อ 2.5)`,'equip');
+      if(p.b.foreign>0)add(p,'bad',`แผนเสริมสร้างฯ มีค่าเดินทางต่างประเทศ ${fmt(p.b.foreign)} บาท ซึ่งไม่สนับสนุน (คู่มือ FF บทที่ 2 ข้อ 2.5)`,'foreign');
+    }
+    if(p.kind==='plan'){
+      if(!p.strat)add(p,'bad','ไม่ได้ระบุความสอดคล้องกับยุทธศาสตร์ ววน. (2.3.1)','strat');
+      else if(!/ยุทธศาสตร์ที่\s*[1-4]\b/.test(p.strat))add(p,'bad','ยุทธศาสตร์ ววน. ระบุได้เฉพาะยุทธศาสตร์ที่ 1–4','strat');
+      if(!p.unitStrategy)add(p,'warn','ไม่ได้ระบุยุทธศาสตร์หน่วยงาน','unitStrategy');
+      if(p.children.length){
+        const pr=p.children.map(c=>c.priority).filter(Boolean);const dupPr=pr.filter((x,i)=>pr.indexOf(x)!==i);
+        if(dupPr.length)add(p,'warn','ลำดับความสำคัญของโครงการภายใต้แผนซ้ำกัน (ลำดับ '+[...new Set(dupPr)].join(', ')+')','priority');
+      }else add(p,'warn','แผนงานไม่มีโครงการภายใต้แผน','code');
+    }
+  });
+  const seen={};
+  projects.forEach(p=>{
+    const req=[['title','ชื่อโครงการ'],['type','ลักษณะโครงการ (ใหม่/ต่อเนื่อง)'],['startFY','ปีงบประมาณที่เริ่ม'],['endFY','ปีงบประมาณที่สิ้นสุด'],['years','ระยะเวลา (ปี)'],['my','การเป็นโครงการ MY (2.2)'],['nplan','ความสอดคล้องกับแผนด้าน ววน. (2.3.2)'],['lead','หัวหน้าโครงการ'],['newLead','สถานะนักวิจัยใหม่ของหัวหน้าโครงการ'],['leadAff','สังกัดหัวหน้าโครงการ'],['objective','วัตถุประสงค์'],['output','ผลผลิต'],['external','การยื่นขอทุนจากแหล่งอื่น'],['oecd','สาขา OECD'],['kwTh','คำสำคัญ (ภาษาไทย)']];
+    req.forEach(([k,l])=>{if(!has(p[k]))add(p,'bad','ไม่ได้กรอก'+l,k)});
+    if(!has(p.focus12)&&!has(p.focus36))add(p,'bad','ไม่ได้เลือกจุดมุ่งเน้นของโครงการ (2.7)','focus36');
+    if(diff(p.Z,p.AA))addB(p,'bad',`งบเสนอขอ ${fmt(num(p.Z))} บาท ไม่เท่ากับผลรวมรายหมวด ${fmt(num(p.AA))} บาท`,'AA');
+    if(diff(p.AA,sumB(p)))addB(p,'bad',`ผลรวมรายหมวดที่กรอก ${fmt(num(p.AA))} บาท ไม่เท่ากับผลบวกงบรายหมวดจริง ${fmt(sumB(p))} บาท`,'AA');
+    if(num(p.AA)<=0)addB(p,'bad','งบเสนอขอเป็นศูนย์','AA');
+    const s=num(p.startFY),e=num(p.endFY),y=num(p.years);
+    if(FY&&s&&e){
+      if(/ใหม่/.test(p.type)&&s!==FY)add(p,'bad',`โครงการใหม่ต้องเริ่มปีงบประมาณ ${FY} (ระบุ ${s})`,'startFY');
+      if(/ต่อเนื่อง/.test(p.type)&&s>=FY)add(p,'bad',`โครงการต่อเนื่องต้องเริ่มก่อนปีงบประมาณ ${FY} (ระบุ ${s})`,'startFY');
+      if(e<FY)add(p,'bad',`ปีที่สิ้นสุด (${e}) อยู่ก่อนปีงบประมาณที่เสนอขอ`,'endFY');
+    }
+    if(s&&e&&y&&e-s+1!==y)add(p,'bad',`ระยะเวลา ${y} ปี ไม่สอดคล้องกับปีเริ่ม ${s} ถึงปีสิ้นสุด ${e} (ควรเป็น ${e-s+1} ปี)`,'years');
+    if(y>1&&isN(p.my))add(p,'bad','โครงการดำเนินการมากกว่า 1 ปี แต่ระบุว่าไม่เป็น MY','my');
+    if(y===1&&isY(p.my))add(p,'bad','โครงการ 1 ปีระบุว่าเป็น MY','my');
+    if(/ต่อเนื่อง/.test(p.type)&&!has(p.prevCode)&&!has(p.prevName))add(p,'warn','โครงการต่อเนื่องไม่ได้ระบุรหัส/ชื่อโครงการปีก่อนหน้า','prevCode');
+    if(has(p.leadAff)&&clean(p.leadAff)!==clean(unit.name))add(p,'bad',`สังกัดหัวหน้าโครงการ (${p.leadAff}) ไม่ใช่หน่วยงานที่ยื่นขอ`,'leadAff');
+    if(has(p.newLead)&&!/^[YN]$/.test(p.newLead))add(p,'warn','สถานะนักวิจัยใหม่ต้องระบุ Y หรือ N','newLead');
+    ['objective','output'].forEach(k=>{if(HTMLJUNK.test(p[k]))add(p,'warn',(k==='objective'?'วัตถุประสงค์':'ผลผลิต')+'มีแท็กหรือรหัส HTML ปน (เช่น p1. /p &ndash;) ควรจัดรูปแบบข้อความใหม่',k)});
+    if(p.objective&&p.objective.length<40)add(p,'warn','วัตถุประสงค์สั้นเกินไป ไม่ระบุสิ่งที่จะวิจัยและวิธีวัดผล','objective');
+    if(p.b.equip>0&&!has(p.equipName))add(p,'bad',`มีค่าครุภัณฑ์ ${fmt(p.b.equip)} บาท แต่ไม่ระบุชื่อครุภัณฑ์`,'equipName');
+    if(p.b.equip===0&&has(p.equipName))add(p,'warn','ระบุชื่อครุภัณฑ์แต่ไม่มีงบค่าครุภัณฑ์','equipName');
+    if(p.b.equip>0&&/จ้าง|บริการ/.test(p.equipName)&&!/ฐานข้อมูล|แอป|เว็บ|web|application|ระบบ|database/i.test(p.equipName))add(p,'warn',`รายการครุภัณฑ์ "${p.equipName}" มีลักษณะจ้างทำ/บริการ ครุภัณฑ์ประเภทจัดจ้างทำได้เฉพาะฐานข้อมูล แอปพลิเคชัน เว็บไซต์ที่ใช้งานต่อเนื่อง (คู่มือ FF บทที่ 2 ข้อ 1.4 (5))`,'equipName');
+    if(p.b.equip>0&&!has(p.equipNote))add(p,'warn','มีค่าครุภัณฑ์แต่ไม่ระบุข้อมูลใบเสนอราคาครบ 3 บริษัท (2.9)','equipNote');
+    const t=num(p.AA);if(t>0&&p.b.foreign/t>.2)add(p,'warn',`ค่าเดินทางต่างประเทศ ${fmt(p.b.foreign)} บาท คิดเป็นร้อยละ ${pct(p.b.foreign/t)} ของงบโครงการ ควรชี้แจงความจำเป็นต่อการวิจัย`,'foreign');
+    const k=norm(p.title);if(k){if(seen[k])add(p,'bad','ชื่อโครงการซ้ำกับ '+seen[k],'title');else seen[k]=p.code}
+  });
+  const order=new Map(items.map((it,i)=>[it,i]));if(U)order.set(U,-1);
+  const srt=l=>l.sort((a,b)=>order.get(a.it)-order.get(b.it));srt(bud);srt(comp);
+  const exp=opt.items&&opt.items.length?checkItems(unit,opt.items,FY,[...projects,...strengths,...plans.filter(p=>!p.children.length)]):null;
+  return{T,researchTotal,strengthTotal,inclS,R,mis,dup,bud,budget,comp,exp,plans,strengths,projects};
+}
+
+/* ---------- expense line items ---------- */
+const ICOLS=[['code',h=>h==='รหัสโครงการ'],['projBudget',h=>h.startsWith('งบเสนอขอของโครงการ')],['itemId',h=>h==='รหัสรายการ'],['unitName',h=>h==='หน่วยงาน'],['year',h=>h==='ปีที่'],['type',h=>h==='ประเภท'],['cat',h=>h==='หมวด'],['sub',h=>h==='หมวดย่อย'],['detail',h=>h.startsWith('รายละเอียด')],['qty',h=>h==='จำนวน'],['uom',h=>h==='หน่วยนับ'],['persons',h=>h.startsWith('คน/')],['times',h=>h.startsWith('ครั้ง/')],['price',h=>h.startsWith('ราคาต่อหน่วย')],['amount',h=>h.startsWith('งบประมาณของรายการ')]];
+function parseItems(rows){
+  const hi=rows.findIndex(r=>r.some(c=>clean(c)==='รหัสโครงการ')&&r.some(c=>clean(c).startsWith('งบประมาณของรายการ')));
+  if(hi<0)throw new Error('ไม่พบหัวตาราง "รหัสโครงการ" และ "งบประมาณของรายการ" ในไฟล์รายการค่าใช้จ่าย');
+  const hdr=rows[hi].map(clean),col={};
+  hdr.forEach((h,i)=>{for(const [k,f] of ICOLS)if(col[k]===undefined&&f(h))col[k]=i});
+  const miss=['code','cat','amount'].filter(k=>col[k]===undefined);if(miss.length)throw new Error('ไฟล์รายการค่าใช้จ่ายขาดคอลัมน์: '+miss.join(', '));
+  const out=[];
+  for(let ri=hi+1;ri<rows.length;ri++){const r=rows[ri];if(!r||!clean(r[col.code]))continue;
+    const g=k=>col[k]===undefined?'':r[col[k]];
+    out.push({row:ri+1,code:clean(g('code')),itemId:clean(g('itemId')),unitName:clean(g('unitName')),year:num(g('year')),type:clean(g('type')),cat:clean(g('cat')),sub:clean(g('sub')),detail:clean(g('detail')),
+      qty:num(g('qty')),uom:clean(g('uom')),persons:num(g('persons')),times:num(g('times')),price:num(g('price')),amount:num(g('amount'))});}
+  return out;
+}
+function catKey(c){if(/ซ่อม|สอบเทียบ/.test(c))return'repair';if(/ครุภัณฑ์/.test(c))return'equip';if(/ต่างประเทศ/.test(c))return'foreign';if(/สาธารณูปโภค/.test(c))return'util';if(/ใช้สอย/.test(c))return'operate';if(/วัสดุ/.test(c))return'material';if(/^ค่าจ้าง/.test(c))return'wage';return'other'}
+const CATNAME=Object.fromEntries(CATS);CATNAME.other='ไม่ทราบหมวด';
+const REF='คู่มือ FF บทที่ 2';
+const WAGECAP=[[/ป\.?\s*เอก/,30000,'ป.เอก'],[/ป\.?\s*โท/,25000,'ป.โท'],[/ป\.?\s*ตรี/,18000,'ป.ตรี'],[/ปวส/,12500,'ปวส.'],[/ปวช/,11000,'ปวช.']];
+const DAYU=/^(วัน|คืน)/,KMU=/กิโลเมตร|กม/,HRU=/ชั่วโมง|ชม/;
+function itemRules(x,target){
+  const f=[],k=catKey(x.cat),d=x.detail,sd=(x.sub+' '+x.detail),p=x.price;
+  const push=(lv,t,ref,to)=>f.push({lv,t,ref,to});
+  if(k==='other')push('bad',`หมวด "${x.cat}" ไม่ใช่หมวดค่าใช้จ่ายของ FF`,'ข้อ 1');
+  /* wrong category */
+  const dEq=sd.replace(/วัสดุคอมพิวเตอร์|อุปกรณ์คอมพิวเตอร์สำหรับเพิ่ม/g,'');
+  if(k==='material'&&/เครื่องคอมพิวเตอร์|คอมพิวเตอร์(ตั้งโต๊ะ|พกพา|แม่ข่าย|สำหรับงาน)|โน้?[ตต]บุ[๊]?[คก]|notebook|laptop|แท็บเล็ต|tablet|เครื่องพิมพ์|printer|กล้องถ่าย|กล้องจุลทรรศน์|เครื่องชั่ง|โดรน|drone|เครื่องบันทึกเสียง|เครื่องสแกน|ตู้เย็น|ตู้แช่|ตู้อบ|เครื่องปรับอากาศ/i.test(dEq))
+    push('bad','เป็นสิ่งของคงทนถาวร ใช้งานได้ตั้งแต่ 1 ปีขึ้นไป ควรเสนอในหมวดค่าครุภัณฑ์ ไม่ใช่ค่าวัสดุ','ข้อ 1.3, 1.4 (6)(7)','equip');
+  if(k==='material'&&/คอมพิวเตอร์|โปรแกรม|ซอฟต์?แวร์|software|ลิขสิทธิ์/i.test(sd)&&p>20000)
+    push(/ชิ้น|เครื่อง|ชุด|ลิขสิทธิ์|license/i.test(x.uom)?'bad':'warn',`ราคาต่อหน่วย ${fmt(p)} บาท (ต่อ${x.uom||'หน่วย'}) เกิน 20,000 บาท วัสดุคอมพิวเตอร์และโปรแกรมต้องมีราคาต่อชิ้นหรือต่อชุดไม่เกิน 20,000 บาท ชิ้นที่เกินต้องเสนอเป็นครุภัณฑ์ ขอให้แสดงราคาต่อชิ้น`,'ข้อ 1.3 (9)(10), 2.3','equip');
+  if(k==='operate'&&/(ซ่อม|บำรุงรักษา|สอบเทียบ)/.test(sd)&&/(เครื่อง|อุปกรณ์|ครุภัณฑ์|เซนเซอร์|sensor)/i.test(sd))
+    push('warn','เป็นค่าซ่อมแซม/บำรุงรักษาครุภัณฑ์หรือสอบเทียบเครื่องมือ ควรเสนอในหมวดค่าซ่อมแซมครุภัณฑ์ ซึ่งนับรวมในเพดานร้อยละ 10 และร้อยละ 20 ของงบรวม','ข้อ 1.2 (22)','repair');
+  if(k==='operate'&&/(จัดซื้อ|ซื้อ)\s*(เครื่อง|ครุภัณฑ์|คอมพิวเตอร์)/.test(sd))push('warn','เป็นการจัดซื้อสิ่งของคงทน ควรเสนอในหมวดค่าครุภัณฑ์','ข้อ 1.4','equip');
+  if(k!=='material'&&/ค่าก่อสร้าง|งานก่อสร้าง|ก่อสร้างอาคาร|ปรับปรุงอาคาร|ปรับปรุงห้อง|ปรับปรุงโครงสร้าง|ปรับปรุงแหล่งเรียนรู้|ปรับปรุงสถานที่|ต่อเติมอาคาร/.test(sd))
+    push('warn','มีลักษณะเป็นค่าก่อสร้างหรือปรับปรุงสิ่งก่อสร้าง ซึ่งกองทุน ววน. ไม่สนับสนุน ขอให้ชี้แจงว่าเป็นระบบชั่วคราวเฉพาะการทดลองหรือไม่','ข้อ 1 (งบลงทุน), 1.4 (3)(4)');
+  if(k==='wage'&&/จ้างเหมา|บริการ/.test(d))push('warn','ระบุว่าเป็นการจ้างเหมา/บริการ ซึ่งเป็นลักษณะค่าใช้สอย ค่าจ้างคือค่าตอบแทนรายเดือนของผู้ปฏิบัติงานในโครงการ หรือที่ปรึกษาที่ให้คำแนะนำด้านเทคนิค (ไม่ใช่ผู้ดำเนินการวิจัย)','ข้อ 1.1, 1.2 (2)','operate');
+  if(k==='equip'&&/คอมพิวเตอร์|โน้?[ตต]บุ|แท็บเล็ต|ซอฟต์?แวร์|software|ลิขสิทธิ์|โปรแกรม/i.test(sd)&&!/ฐานข้อมูล|แอป|เว็บ/.test(d)&&!/คำนวณขั้นสูง|ประมวลผล|ข้อมูลขนาดใหญ่|ปริมาณมาก|big ?data|วิเคราะห์ข้อมูล/i.test(sd))
+    push('warn','ครุภัณฑ์คอมพิวเตอร์หรือโปรแกรมต้องใช้เพื่อการคำนวณขั้นสูง การวิเคราะห์หรือจัดการข้อมูลปริมาณมากเท่านั้น ขอให้ระบุความจำเป็น','ข้อ 1.4 (6), หมายเหตุ 4–5');
+  if(k==='equip'&&/จัดจ้างทำฐานข้อมูล/.test(x.sub)&&/ลิขสิทธิ์|ซอฟต์?แวร์|software|license/i.test(d))push('warn','เป็นการซื้อลิขสิทธิ์โปรแกรม ไม่ใช่การจัดจ้างทำฐานข้อมูล/แอปพลิเคชัน ขอให้เลือกหมวดย่อยให้ตรง (ยังเป็นครุภัณฑ์เพราะราคาเกิน 20,000 บาท)','ข้อ 1.4 (5), หมายเหตุ 5');
+  if(k==='equip'&&p>20e6)push('warn','ครุภัณฑ์มูลค่าเกิน 20 ล้านบาท ต้องแนบการวิเคราะห์ความคุ้มค่า ความซ้ำซ้อน และแผนใช้ร่วมกับหน่วยงานอื่น','ข้อ 2.4');
+  /* sub-category vs detail */
+  if(/ลงทะเบียน/.test(x.sub)&&d&&!/ลงทะเบียน/.test(d)&&/พาหนะ|เครื่องบิน|น้ำมัน|ที่พัก|ประชุม|สัมมนา|อบรม/.test(d))push('warn','รายละเอียดไม่ใช่ค่าลงทะเบียน แต่ใส่ในหมวดย่อยค่าลงทะเบียนนำเสนอผลงาน ขอให้แยกไปหมวดย่อยที่ตรง (เช่น ค่าเดินทาง ค่าจัดประชุม)','ข้อ 1.2 (3)(6)(8)');
+  if(/สิ่งพิมพ์|สื่อเผยแพร่/.test(x.sub)&&/เก็บข้อมูล|วิเคราะห์ข้อมูล|แรงงาน|ประเมิน/.test(d))push('warn','รายละเอียดเป็นการจ้างเก็บ/วิเคราะห์ข้อมูล ไม่ใช่ค่าจัดทำสื่อเผยแพร่ ขอให้ย้ายไปหมวดย่อยค่าจ้างเหมา','ข้อ 1.2 (2)(7)');
+  if(/จัดประชุม/.test(x.sub)&&/เครื่องบิน|พาหนะเดินทาง/.test(d))push('warn','ค่าพาหนะเดินทางไม่ใช่ค่าจัดประชุม/อบรม (ซึ่งได้แก่ค่าสถานที่และค่าอาหาร) ขอให้ย้ายไปหมวดย่อยค่าใช้จ่ายในการเดินทาง','ข้อ 1.2 (3)(8)');
+  if(/จัดประชุม/.test(x.sub)&&/ศึกษาดูงาน|สื่อ|สิ่งพิมพ์/.test(d)&&/\//.test(d))push('warn','รวมหลายกิจกรรม (ประชุม อบรม ศึกษาดูงาน สื่อ) ไว้ในรายการเดียว ขอให้แยกรายการตามหมวดย่อยและแสดงตัวคูณ','ข้อ 1.2');
+  /* rates */
+  if(k==='wage'){for(const [re,cap,lab] of WAGECAP)if(re.test(sd)){if(p>cap&&p<cap*3)push('bad',`อัตราค่าจ้างวุฒิ${lab} ${fmt(p)} บาทต่อเดือน เกินอัตราที่กำหนด (ไม่เกิน ${fmt(cap)} บาท)`,'ข้อ 2.1');break}}
+  if(/ล่วงเวลา|OT/.test(sd)){
+    const hol=/วันหยุด/.test(sd),wd=/วันทำการ/.test(sd);
+    if(p<=100){if(wd&&p>50)push('bad',`อัตรา OT วันทำการ ${p} บาทต่อชั่วโมง เกินอัตราที่กำหนด (ชั่วโมงละ 50 บาท ไม่เกินวันละ 4 ชั่วโมง)`,'ข้อ 2.2 (1)');
+      else if(p>60)push('bad',`อัตรา OT ${p} บาทต่อชั่วโมง เกินอัตราสูงสุด (วันหยุดราชการชั่วโมงละ 60 บาท)`,'ข้อ 2.2 (1)');
+      if(wd&&x.times>4&&x.times<=24)push('warn',`ระบุ OT วันทำการ ${x.times} ชั่วโมงต่อวัน เกิน 4 ชั่วโมง`,'ข้อ 2.2 (1)');
+      if(hol&&x.times>7&&x.times<=24)push('warn',`ระบุ OT วันหยุด ${x.times} ชั่วโมงต่อวัน เกิน 7 ชั่วโมง`,'ข้อ 2.2 (1)');}
+    else if(p>420)push('bad',`ค่า OT ${fmt(p)} บาทต่อ${x.uom||'หน่วย'} เกินอัตราสูงสุดต่อวัน (วันหยุด 60 บาท × 7 ชั่วโมง = 420 บาท) ขอให้แสดงอัตรารายชั่วโมงและจำนวนชั่วโมง`,'ข้อ 2.2 (1)');
+    else if(wd&&p>200)push('bad',`ค่า OT วันทำการ ${fmt(p)} บาทต่อวัน เกินอัตราสูงสุด (50 บาท × 4 ชั่วโมง = 200 บาท)`,'ข้อ 2.2 (1)');
+  }
+  const perDay=DAYU.test(x.uom);
+  if(k==='operate'&&/เบี้ยเลี้ยง/.test(sd)&&perDay&&p>400&&!/ต่างประเทศ|ชาวต่าง/.test(sd))push('bad',`ค่าเบี้ยเลี้ยง ${fmt(p)} บาทต่อวัน เกินอัตราที่กำหนด (ไม่เกินวันละ 400 บาท)`,'ข้อ 2.2 (4)');
+  if(k==='operate'&&/ที่พัก/.test(sd)&&perDay&&p>2000)push('bad',`ค่าที่พัก ${fmt(p)} บาทต่อคืน เกินอัตราที่กำหนด (ไม่เกินคืนละ 2,000 บาทต่อคน)`,'ข้อ 2.2 (6)');
+  if(k==='operate'&&/อาหาร/.test(d)&&/มื้อ|วัน/.test(x.uom)&&p>1000)push('bad',`ค่าอาหาร ${fmt(p)} บาท เกินอัตราที่กำหนด (ไม่เกิน 1,000 บาทต่อวันต่อคน)`,'ข้อ 2.2 (7)');
+  if(/รถตู้|รถยนต์|ยานพาหนะ|รถ.*คนขับ/.test(d)&&/เช่า|จ้าง/.test(d)&&perDay&&p>2500)push('bad',`ค่าเช่ารถพร้อมคนขับ ${fmt(p)} บาทต่อวัน เกินอัตราที่กำหนด (ไม่เกินวันละ 2,500 บาท ค่าน้ำมันจ่ายตามจริง)`,'ข้อ 2.2 (5)');
+  if(KMU.test(x.uom)&&p>6)push('bad',`ค่าเหมาจ่ายพาหนะ ${p} บาทต่อกิโลเมตร เกินอัตราที่กำหนด (รถยนต์ไม่เกิน 6 บาท รถจักรยานยนต์ไม่เกิน 4 บาท)`,'ข้อ 2.2 (5)');
+  if(/วิทยากร|ผู้เชี่ยวชาญ/.test(sd)&&HRU.test(x.uom)&&p>1200)push('bad',`ค่าตอบแทนวิทยากร ${fmt(p)} บาทต่อชั่วโมง เกินอัตราที่กำหนด (ไม่เกิน 1,200 บาท)`,'ข้อ 2.2 (2)');
+  if(k==='foreign'){
+    if(/เบี้ยเลี้ยง/.test(d)){if(perDay&&p>2500)push('bad',`เบี้ยเลี้ยงต่างประเทศ ${fmt(p)} บาทต่อวัน เกินอัตราที่กำหนด (ไม่เกินวันละ 2,500 บาท)`,'ข้อ 2.2 (8)');else if(!perDay)push('warn',`เบี้ยเลี้ยงต่างประเทศระบุ ${fmt(p)} บาทต่อ${x.uom||'หน่วย'} ไม่แสดงจำนวนวัน จึงตรวจอัตรา (วันละไม่เกิน 2,500 บาท) ไม่ได้`,'ข้อ 2.2 (8)')}
+    if(/ที่พัก/.test(d)){if(perDay&&p>10500)push('bad',`ค่าที่พักต่างประเทศ ${fmt(p)} บาทต่อคืน เกินอัตราสูงสุด (ประเภท ก 7,500 บาท สูงสุดไม่เกิน 10,500 บาท)`,'ข้อ 2.2 (10)');else if(!perDay)push('warn',`ค่าที่พักต่างประเทศระบุ ${fmt(p)} บาทต่อ${x.uom||'หน่วย'} ไม่แสดงจำนวนคืน จึงตรวจอัตราตามประเภทประเทศไม่ได้`,'ข้อ 2.2 (10)')}
+  }
+  /* strengthening plan */
+  if(target&&target.kind==='strength'){
+    if(k==='equip'||k==='foreign')push('bad',`แผนเสริมสร้างฯ ไม่สนับสนุน${CATNAME[k]}`,'ข้อ 2.5');
+    if(/พัฒนาระบบ|ระบบสารสนเทศ|ระบบจัดเก็บ|ประเมินผลลัพธ์|ประเมินผลกระทบ/.test(sd))push('bad','แผนเสริมสร้างฯ ไม่สนับสนุนค่าพัฒนาระบบสารสนเทศใหม่ และค่าประเมินผลลัพธ์/ผลกระทบ','ข้อ 2.5');
+  }
+  /* arithmetic */
+  const fac=[x.qty,x.persons,x.times,x.price].filter(v=>v>0);
+  if(fac.length>=2&&x.amount>0){const prod=fac.reduce((a,b)=>a*b,1);if(Math.abs(prod-x.amount)>1)push('bad',`ตัวคูณ ${fac.map(v=>fmt(v)).join(' × ')} = ${fmt(prod)} บาท ไม่เท่ากับงบประมาณของรายการ ${fmt(x.amount)} บาท`,'การคำนวณ')}
+  return f;
+}
+function checkItems(unit,all,FY,targets){
+  const byCode=new Map(targets.map(t=>[t.code,t]));
+  const items=all.filter(x=>byCode.has(x.code)||(x.unitName&&clean(x.unitName)===clean(unit.name)));
+  const findings=[],recon=[],orphans=[],otherYear=[];
+  const seen=new Map();
+  targets.forEach(t=>{
+    const mine=items.filter(x=>x.code===t.code);
+    const exp=FY&&num(t.startFY)?FY-num(t.startFY)+1:0;
+    let cur=mine;if(exp&&mine.some(x=>x.year===exp)){cur=mine.filter(x=>x.year===exp);const o=mine.length-cur.length;if(o)otherYear.push({t,n:o,exp})}
+    else if(exp&&mine.length&&mine.every(x=>x.year)&&t.kind==='project')otherYear.push({t,n:mine.length,exp,none:true});
+    const total=t.kind==='project'?num(t.AA):num(t.Y);
+    const sums={};CATS.forEach(([k])=>sums[k]=0);let other=0;
+    cur.forEach(x=>{const k=catKey(x.cat);if(k in sums)sums[k]+=x.amount;else other+=x.amount});
+    const s=cur.reduce((a,x)=>a+x.amount,0);
+    const rows=CATS.map(([k,l])=>({k,l,file:t.b[k],items:sums[k],ok:Math.abs(t.b[k]-sums[k])<=1}));
+    const ok=cur.length>0&&Math.abs(total-s)<=1&&rows.every(r=>r.ok);recon.push({t,n:cur.length,total,itemsTotal:s,ok,lv:ok?'ok':(!cur.length?'warn':'bad'),rows,missing:!cur.length&&total>0});
+    cur.forEach(x=>{
+      const key=[x.code,catKey(x.cat),x.sub,norm(x.detail)].join('|');
+      if(x.detail&&seen.has(key))findings.push({t,x,lv:'warn',t2:null,msg:`รายการซ้ำกับรหัสรายการ ${seen.get(key).itemId} (หมวดและรายละเอียดเดียวกัน ราคาต่อหน่วย ${fmt(seen.get(key).price)} และ ${fmt(x.price)} บาท) ขอให้ชี้แจงหรือรวมรายการ`,ref:'ความถูกต้อง'});
+      else if(x.detail)seen.set(key,x);
+      itemRules(x,t).forEach(r=>findings.push({t,x,lv:r.lv,msg:r.t,ref:r.ref,to:r.to}));
+    });
+  });
+  const codes=new Set(targets.map(t=>t.code));
+  [...new Set(all.filter(x=>!codes.has(x.code)&&(!x.unitName||clean(x.unitName)===clean(unit.name))).map(x=>x.code))].forEach(c=>orphans.push(c));
+  return{findings,recon,orphans,otherYear,count:items.length};
+}
+
+function label(it){return it.kind==='unit'?'ภาพรวมหน่วยงาน':`${it.kind==='project'?'โครงการ':'แผนงาน'} "${it.title}" (${it.code})`}
+
+function letter(unit,res,opt){
+  opt=opt||{};const L=[];const fy=opt.fy||'....';
+  L.push(`ข้อสังเกตต่อคำของบประมาณกองทุนส่งเสริม ววน. ด้านการสนับสนุนงานมูลฐาน (Fundamental Fund) ปีงบประมาณ พ.ศ. ${fy}`);
+  L.push(`หน่วยงาน: ${unit.name}${unit.ministry?' ('+unit.ministry+')':''}`);
+  L.push(`วงเงินเสนอขอรวม ${fmt(res.T)} บาท (งบวิจัยและนวัตกรรม ${fmt(res.researchTotal)} บาท${res.strengthTotal?' งบแผนเสริมสร้างความเข้มแข็งฯ '+fmt(res.strengthTotal)+' บาท':''}) จำนวน ${res.plans.length} แผนงาน ${res.projects.length} โครงการ`,'');
+  L.push('สำนักงานคณะกรรมการส่งเสริมวิทยาศาสตร์ วิจัยและนวัตกรรม (สกสว.) ได้ตรวจสอบคำของบประมาณที่หน่วยงานเสนอผ่านระบบข้อมูลสารสนเทศวิจัยและนวัตกรรมแห่งชาติ (NRIIS) แล้ว มีข้อสังเกตเพื่อให้หน่วยงานพิจารณาปรับปรุงคำขอฯ ดังนี้','');
+  L.push('1. ความเป็นโครงการวิจัยและพัฒนานวัตกรรมตามพันธกิจของหน่วยงาน');
+  const m=res.mis.filter(x=>x.lv!=='ok');
+  if(!m.length)L.push('   โครงการทั้งหมดมีลักษณะเป็นงานวิจัยและพัฒนาที่สอดคล้องกับพันธกิจของหน่วยงาน ไม่พบข้อสังเกต');
+  m.forEach((x,i)=>{const t=`   1.${i+1} ${label(x.p)} `;
+    if(x.lv==='bad')L.push(t+`มีลักษณะเป็นกิจกรรม${x.non.join(' ')} ซึ่งไม่ใช่โครงการวิจัยและพัฒนานวัตกรรม จึงไม่เข้าข่ายการสนับสนุนจาก Fundamental Fund ขอให้พิจารณาตัดออกจากคำขอ หรือปรับเป็นโครงการวิจัยที่มีโจทย์ วิธีการ และผลลัพธ์ชัดเจน`);
+    else if(!x.mk.length)L.push(t+'ยังไม่แสดงความเชื่อมโยงกับเป้าประสงค์และยุทธศาสตร์ของหน่วยงานอย่างชัดเจน ขอให้ระบุความสอดคล้องกับพันธกิจด้าน ววน. ของหน่วยงาน');
+    else L.push(t+`ขอให้ระบุโจทย์วิจัย วิธีการวิจัย และผลลัพธ์ที่คาดหวังให้ชัดเจนยิ่งขึ้น${x.non.length?' และแยกกิจกรรมที่ไม่ใช่การวิจัย ('+x.non.join(', ')+') ออกจากโครงการ':''}`)});
+  L.push('');
+  L.push('2. ความซ้ำซ้อนของโครงการ');
+  if(!res.dup.length)L.push('   ไม่พบโครงการที่มีลักษณะซ้ำซ้อนภายในหน่วยงาน');
+  res.dup.forEach((x,i)=>{const t=`   2.${i+1} `;
+    if(x.kind==='pair')L.push(t+`${label(x.a)} และ${label(x.b)} มีชื่อ วัตถุประสงค์ และคำสำคัญ${x.lv==='bad'?'ใกล้เคียงกันมาก':'คล้ายคลึงกัน'}${x.sameLead?' และมีหัวหน้าโครงการคนเดียวกัน':''} ขอให้ชี้แจงความแตกต่างของขอบเขต วิธีการ และผลผลิต หรือพิจารณารวมเป็นโครงการเดียว`);
+    else if(x.kind==='prior')L.push(t+`${label(x.a)} มีความใกล้เคียงกับโครงการ "${x.q}" ที่เคยได้รับการสนับสนุน ขอให้ชี้แจงผลการดำเนินงานเดิมและส่วนที่เป็นงานใหม่`);
+    else if(x.kind==='external')L.push(t+`${label(x.a)} ระบุว่ายื่นเสนอขอรับทุนจากแหล่งอื่น (${x.txt}) ขอให้ชี้แจงขอบเขตที่ไม่ซ้ำซ้อนกับแหล่งทุนดังกล่าว`);
+    else L.push(t+`${x.lead} เป็นหัวหน้าโครงการจำนวน ${x.ps.length} โครงการ ขอให้พิจารณาความเหมาะสมของภาระงาน`)});
+  L.push('');
+  L.push('3. การเสนอของบประมาณตามเกณฑ์ที่คณะกรรมการส่งเสริมวิทยาศาสตร์ วิจัยและนวัตกรรม (กสว.) กำหนด');
+  const f=res.R.filter(x=>x.fail);
+  if(!f.length)L.push(`   สัดส่วนงบประมาณทุกหมวดเป็นไปตามเกณฑ์ (คิดจากงบเสนอขอรวม ${fmt(res.T)} บาท)`);
+  f.forEach((x,i)=>{const top=x.top.map(t=>`${t.it.code} (${fmt(t.v)} บาท)`).join(', ');
+    L.push(`   3.${i+1} ${x.label} รวม ${fmt(x.amt)} บาท คิดเป็นร้อยละ ${pct(x.share)} ของงบเสนอขอรวม เกินเกณฑ์ที่กำหนด (${x.txt}) ขอให้ปรับลดลงอย่างน้อย ${fmt(x.cut)} บาท${top?' โดยรายการที่มียอดหมวดนี้สูง ได้แก่ '+top:''}`)});
+  if(f.length)L.push('   หมายเหตุ: ยอดที่ต้องปรับลดคำนวณจากวงเงินรวมปัจจุบัน หากหน่วยงานปรับวงเงินรวม ขอให้ตรวจสอบสัดส่วนทุกหมวดอีกครั้ง');
+  L.push('');
+  let n=4;
+  L.push(`${n}. ยอดงบประมาณแผนงาน โครงการ และกรอบงบประมาณของหน่วยงาน`);
+  const B=res.budget;
+  if(B.frame)L.push(`   งบประมาณรวมทุกแผนงาน (รวมแผนเสริมสร้างความเข้มแข็งฯ) ${fmt(B.planTotal)} บาท ${B.frameOk?'เท่ากับ':'ไม่เท่ากับ'}กรอบงบประมาณที่ สกสว. แจ้ง ${fmt(B.frame)} บาท`);
+  if(!res.bud.length)L.push('   งบประมาณของโครงการภายใต้แต่ละแผนงานรวมแล้วเท่ากับงบประมาณของแผนงาน และยอดรวมรายหมวดถูกต้อง');
+  res.bud.forEach((c,i)=>L.push(`   ${n}.${i+1} ${label(c.it)}: `+c.iss.map(x=>x.t).join(' / ')));
+  L.push('');
+  if(res.exp){
+    n++;L.push(`${n}. การจัดหมวดค่าใช้จ่ายและอัตราค่าใช้จ่ายตามคู่มือการจัดทำคำของบประมาณ FF (บทที่ 2)`);
+    const E=res.exp;let i=0;
+    const badRecon=E.recon.filter(r=>!r.ok);
+    badRecon.forEach(r=>{i++;
+      if(r.missing)L.push(`   ${n}.${i} ${label(r.t)}: ไม่พบรายการค่าใช้จ่ายในไฟล์รายละเอียดงบประมาณที่ได้รับ ขอให้ส่งรายละเอียดรายการค่าใช้จ่ายเพื่อประกอบการพิจารณา`);
+      else{const bad=r.rows.filter(x=>!x.ok).map(x=>`${x.l} ในแบบคำขอ ${fmt(x.file)} บาท แต่รายการรวม ${fmt(x.items)} บาท`);
+        L.push(`   ${n}.${i} ${label(r.t)}: รายละเอียดค่าใช้จ่ายรวม ${fmt(r.itemsTotal)} บาท${Math.abs(r.total-r.itemsTotal)>1?' ไม่เท่ากับงบเสนอขอ '+fmt(r.total)+' บาท':''}${bad.length?' และงบรายหมวดไม่ตรงกัน ('+bad.join('; ')+')':''} ขอให้ปรับให้ตรงกัน`);}
+    });
+    const groups=new Map();E.findings.forEach(f=>{if(!groups.has(f.t))groups.set(f.t,[]);groups.get(f.t).push(f)});
+    groups.forEach((fs,t)=>{i++;L.push(`   ${n}.${i} ${label(t)}`);
+      fs.forEach(f=>L.push(`        - ${f.x.detail||f.x.sub||f.x.cat} (หมวด${f.x.cat}${f.x.itemId?' รหัสรายการ '+f.x.itemId:''} ${fmt(f.x.amount)} บาท): ${f.msg}${/^ข้อ/.test(f.ref)?' ('+REF+' '+f.ref+')':''}`))});
+    if(!i)L.push('   รายการค่าใช้จ่ายจัดหมวดถูกต้อง อัตราเป็นไปตามคู่มือ และรวมแล้วตรงกับงบเสนอขอ');
+    L.push('');
+  }
+  n++;L.push(`${n}. ความครบถ้วนและถูกต้องของข้อมูลในระบบ NRIIS`);
+  if(!res.comp.length)L.push('   ข้อมูลครบถ้วนและถูกต้อง');
+  res.comp.forEach((c,i)=>L.push(`   ${n}.${i+1} ${label(c.it)}: `+c.iss.map(x=>x.t).join(' / ')));
+  L.push('');
+  L.push(`จึงขอให้หน่วยงานปรับปรุงคำของบประมาณในระบบ NRIIS ตามข้อสังเกตข้างต้น และยืนยันการส่งคำขอฉบับปรับปรุง${opt.deadline?' ภายในวันที่ '+opt.deadline:' ภายในระยะเวลาที่กำหนด'} หากมีข้อสงสัยสามารถติดต่อผู้ประสานงาน สกสว. ได้`);
+  return L.join('\n');
+}
+return{CATS,CATNAME,parse,parseItems,analyze,letter,fmt,pct,num,label};
+})();
+if(typeof module!=='undefined')module.exports=FFE;
+
+</script>
+<script>
+const SAMPLE={"rows":null,"fileName":""};
+const KEY='ff-checker-v3';
+const $=id=>document.getElementById(id);
+const {fmt,pct,num,label}=FFE;
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const chip=(lv,t)=>`<span class="chip ${lv}">${esc(t)}</span>`;
+function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(t._h);t._h=setTimeout(()=>t.hidden=true,1900)}
+function copyText(t,el){
+  const fb=()=>{if(el&&el.select){el.focus();el.select();toast('เลือกข้อความแล้ว กด Ctrl+C เพื่อคัดลอก')}else toast('คัดลอกอัตโนมัติไม่ได้ในหน้าต่างนี้')};
+  try{navigator.clipboard.writeText(t).then(()=>toast('คัดลอกแล้ว'),fb)}catch(e){fb()}
+}
+
+const BLANK=()=>({rows:null,fileName:'',itemRows:null,itemsFile:'',unitIdx:0,opt:{fy:'',deadline:'',frame:'',includeStrength:true,mission:'',prior:''}});
+let S=BLANK();
+try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.rows)S=s}catch(e){}
+if(!S.rows&&SAMPLE.rows){S.rows=SAMPLE.rows;S.fileName=SAMPLE.fileName;S.itemRows=SAMPLE.itemRows||null;S.itemsFile=SAMPLE.itemsFile||''}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+let data=null,unit=null,res=null,letterEdited=false,itemsParsed=null;
+
+function load(){
+  $('err').hidden=true;
+  if(!S.rows){data=null;showEmpty();return}
+  try{data=FFE.parse(S.rows)}catch(e){data=null;$('err').textContent=e.message;$('err').hidden=false;showEmpty();return}
+  if(!S.opt.fy&&data.fy)S.opt.fy=String(data.fy);
+  if(S.unitIdx>=data.units.length)S.unitIdx=0;
+  ['unitbox','tabs','exportbar'].forEach(id=>$(id).hidden=false);
+  const np=data.units.reduce((s,u)=>s+u.items.filter(i=>i.kind==='project').length,0);
+  $('up-status').innerHTML=`ไฟล์ปัจจุบัน <b>${esc(S.fileName)}</b> · ${data.units.length} หน่วยงาน · ${np} โครงการ · ปีงบประมาณ ${data.fy||'ไม่ระบุ'} — อัปโหลดไฟล์ใหม่เพื่อแทนที่`;
+  $('u-select').innerHTML=data.units.map((u,i)=>`<option value="${i}">${esc(u.name)}</option>`).join('');
+  $('u-select').value=S.unitIdx;$('u-select-wrap').hidden=data.units.length<2;
+  $('o-fy').value=S.opt.fy;$('o-deadline').value=S.opt.deadline;$('o-incl').checked=S.opt.includeStrength!==false;
+  $('o-mission').value=S.opt.mission;$('o-prior').value=S.opt.prior;$('o-frame').value=S.opt.frame||'';
+  loadItems();
+  $('file-name').textContent=S.fileName;
+  letterEdited=false;run();showTab();
+}
+function showEmpty(){['unitbox','tabs','exportbar','p-struct','p-result','p-fill','p-letter','p-spec'].forEach(id=>$(id).hidden=true);$('up-status').textContent='ยังไม่มีไฟล์ อัปโหลดไฟล์เพื่อเริ่มตรวจ';loadItems()}
+function loadItems(){
+  itemsParsed=null;
+  if(!S.itemRows){$('up-status2').textContent='ไม่บังคับ · ถ้าไม่อัปโหลด ระบบจะข้ามการตรวจข้อ 5';return}
+  try{itemsParsed=FFE.parseItems(S.itemRows);const codes=new Set(itemsParsed.map(x=>x.code));
+    $('up-status2').innerHTML=`ไฟล์ปัจจุบัน <b>${esc(S.itemsFile)}</b> · ${itemsParsed.length} รายการ · ${codes.size} โครงการ <button class="ghost" id="btn-rm-items" type="button" style="padding:2px 8px;font-size:.8rem">เอาออก</button>`;
+    $('btn-rm-items').onclick=()=>{S.itemRows=null;S.itemsFile='';save();loadItems();if(data)run()};
+  }catch(e){$('up-status2').textContent='อ่านไฟล์รายการไม่สำเร็จ: '+e.message}
+}
+
+function run(){
+  unit=data.units[S.unitIdx];
+  res=FFE.analyze(unit,{fy:+S.opt.fy,includeStrength:S.opt.includeStrength!==false,mission:S.opt.mission,prior:S.opt.prior,frame:S.opt.frame,items:itemsParsed});
+  $('u-title').textContent=unit.name;
+  $('u-meta').textContent=[unit.ministry,unit.unitType,`${res.plans.length} แผนงาน · ${res.projects.length} โครงการ${res.strengths.length?' · แผนเสริมสร้างฯ '+res.strengths.length:''}`].filter(Boolean).join(' · ');
+  renderStruct();renderResult();renderFill();
+  if(!letterEdited)$('letter').value=FFE.letter(unit,res,{fy:S.opt.fy,deadline:S.opt.deadline});
+}
+
+const KIND={unit:'หน่วยงาน',plan:'แผนงาน',strength:'แผนเสริมสร้างฯ',project:'โครงการ'};
+function issuesOf(it){const out={bad:0,warn:0};[res.comp,res.bud].forEach(l=>{const c=l.find(x=>x.it===it);if(c)c.iss.forEach(i=>out[i.lv]++)});
+  if(res.exp){res.exp.findings.forEach(f=>{if(f.t===it)out[f.lv]++});res.exp.recon.forEach(r=>{if(r.t===it&&!r.ok)out[r.lv]++})}
+  const m=res.mis.find(x=>x.p===it);if(m&&m.lv!=='ok')out[m.lv]++;
+  res.dup.forEach(d=>{if(d.a===it||d.b===it||(d.ps||[]).includes(it))out[d.lv]++});return out}
+function issueChip(it){const o=issuesOf(it);return o.bad?chip('bad',o.bad+' ต้องแก้'):o.warn?chip('warn',o.warn+' ทบทวน'):chip('ok','ผ่าน')}
+function renderStruct(){
+  const rows=[unit.unitRow,...unit.items].filter(Boolean);
+  $('struct-table').innerHTML='<thead><tr><th>แถว</th><th>ประเภท</th><th>รหัส</th><th>ลำดับ</th><th>ชื่อ</th><th>ลักษณะ</th><th>ปี</th><th class="r">งบเสนอขอ (บาท)</th><th>ผลตรวจ</th></tr></thead><tbody>'+
+    rows.map(it=>{const amt=it.kind==='project'?num(it.AA):num(it.Y);
+      return `<tr class="k-${it.kind}"><td class="num">${it.row}</td><td>${KIND[it.kind]}</td><td class="num">${esc(it.code)}</td><td class="num">${esc(it.priority)}</td><td class="t">${esc(it.kind==='unit'?unit.name:it.title)}</td><td>${esc(it.type)}</td><td class="num">${esc(it.startFY&&it.endFY?it.startFY+'–'+it.endFY:'')}</td><td class="r num">${fmt(amt)}</td><td>${issueChip(it)}</td></tr>`}).join('')+'</tbody>';
+}
+function renderResult(){
+  const {T,R}=res,rf=R.filter(x=>x.fail).length;
+  $('rule-note').textContent=`งบเสนอขอรวม ${fmt(T)} บาท = งบวิจัยและนวัตกรรม ${fmt(res.researchTotal)} บาท`+(res.inclS&&res.strengthTotal?` + งบแผนเสริมสร้างฯ ${fmt(res.strengthTotal)} บาท`:'')+' · "ต้องลดอย่างน้อย" คิดว่ายอดที่ลดทำให้งบรวมลดลงด้วย';
+  $('rule-chip').innerHTML=rf?chip('bad','เกินเกณฑ์ '+rf+' ข้อ'):chip('ok','ผ่านทุกข้อ');
+  $('rule-table').innerHTML='<thead><tr><th>ข้อ</th><th>หมวด</th><th class="r">ยอดเสนอขอ</th><th class="r">ร้อยละ</th><th>เกณฑ์</th><th class="r">เพดาน (บาท)</th><th>การใช้เพดาน</th><th>ผล</th><th class="r">ต้องลดอย่างน้อย</th><th class="r">คงเหลือถึงเพดาน</th></tr></thead><tbody>'+
+    R.map(x=>{const use=x.cap>0?Math.min(x.amt/x.cap,1.5):0;return `<tr><td class="num">${x.no}</td><td>${x.label}</td><td class="r num">${fmt(x.amt)}</td><td class="r num">${pct(x.share)}</td><td>${esc(x.txt)}</td><td class="r num">${fmt(x.cap)}</td><td><div class="meter" title="ใช้ ${(x.cap?x.amt/x.cap*100:0).toFixed(1)}% ของเพดาน"><i class="${x.fail?'bad':''}" style="width:${use/1.5*100}%"></i><s style="left:${100/1.5}%"></s></div></td><td>${x.fail?chip('bad','เกิน'):chip('ok','ผ่าน')}</td><td class="r num">${x.fail?fmt(x.cut):'–'}</td><td class="r num">${x.fail?'–':fmt(x.headroom)}</td></tr>`}).join('')+'</tbody>';
+
+  const mb=res.mis.filter(m=>m.lv==='bad').length,mw=res.mis.filter(m=>m.lv==='warn').length;
+  $('mission-chip').innerHTML=mb?chip('bad',mb+' ไม่ผ่าน'):mw?chip('warn',mw+' ควรทบทวน'):chip('ok','ผ่านทั้งหมด');
+  const LV={ok:'ผ่าน',warn:'ควรทบทวน',bad:'ไม่ผ่าน'};
+  $('mission-table').innerHTML='<thead><tr><th>รหัส</th><th>โครงการ</th><th>คำพันธกิจที่พบ</th><th class="c">คำบ่งชี้วิจัย</th><th>ผล</th><th>เหตุผล</th></tr></thead><tbody>'+
+    res.mis.map(m=>`<tr><td class="num">${esc(m.p.code)}</td><td>${esc(m.p.title)}</td><td>${esc(m.mk.join(', '))||'–'}</td><td class="c num">${m.rd.length}</td><td>${chip(m.lv,LV[m.lv])}</td><td>${esc(m.why)}</td></tr>`).join('')+'</tbody>';
+
+  const db=res.dup.filter(d=>d.lv==='bad').length,dw=res.dup.length-db;
+  $('dup-chip').innerHTML=db?chip('bad',db+' ซ้ำซ้อนสูง'):dw?chip('warn',dw+' ควรตรวจสอบ'):chip('ok','ไม่พบ');
+  $('dup-list').innerHTML=res.dup.length?res.dup.map(d=>{
+    const head=d.lv==='bad'?'ซ้ำซ้อนสูง':'ควรตรวจสอบ';
+    if(d.kind==='lead')return `<li>${chip('warn','ภาระหัวหน้า')}<div><b>${esc(d.lead)}</b> เป็นหัวหน้า ${d.ps.length} โครงการ<div class="meta">${d.ps.map(p=>esc(p.code)).join(', ')}</div></div></li>`;
+    if(d.kind==='external')return `<li>${chip('warn','แหล่งทุนอื่น')}<div><b>${esc(d.a.code)}</b> ${esc(d.a.title)}<div class="meta">ระบุว่า: ${esc(d.txt)}</div></div></li>`;
+    if(d.kind==='prior')return `<li>${chip(d.lv,head)}<div><b>${esc(d.a.code)}</b> ${esc(d.a.title)}<div class="meta">คล้ายโครงการเดิม: ${esc(d.q)} · ค่าความคล้าย <span class="num">${d.s.toFixed(2)}</span></div></div></li>`;
+    return `<li>${chip(d.lv,head)}<div><b>${esc(d.a.code)}</b> ${esc(d.a.title)}<br><b>${esc(d.b.code)}</b> ${esc(d.b.title)}<div class="meta">ค่าความคล้าย <span class="num">${d.s.toFixed(2)}</span>${d.sameLead?' · หัวหน้าโครงการคนเดียวกัน':''}</div></div></li>`;
+  }).join(''):'<li class="empty" style="display:block">ไม่พบโครงการที่มีลักษณะซ้ำซ้อนภายในหน่วยงาน</li>';
+
+  const cb=res.comp.reduce((s,c)=>s+c.iss.filter(x=>x.lv==='bad').length,0),cw=res.comp.reduce((s,c)=>s+c.iss.filter(x=>x.lv==='warn').length,0);
+  $('comp-chip').innerHTML=cb?chip('bad',cb+' จุดต้องแก้'):cw?chip('warn',cw+' จุดควรปรับ'):chip('ok','ครบถ้วน');
+  $('comp-list').innerHTML=findList(res.comp,'ข้อมูลครบถ้วนและถูกต้อง');
+
+  const bc=renderBudget(),ec=renderExp();
+  const tb=rf+mb+db+cb+bc.bad+ec.bad,tw=mw+dw+cw+bc.warn+ec.warn;
+  $('stats').innerHTML=`<div class="stat"><b>${fmt(T)}</b><span>งบเสนอขอรวม (บาท)</span></div>
+    <div class="stat"><b>${res.plans.length} / ${res.projects.length}</b><span>แผนงาน / โครงการ</span></div>
+    <div class="stat ${tb?'bad':'ok'}"><b>${tb}</b><span>ประเด็นที่ต้องแก้ไข</span></div>
+    <div class="stat ${tw?'warn':'ok'}"><b>${tw}</b><span>ประเด็นที่ควรทบทวน</span></div>
+    <div class="stat ${tb?'bad':tw?'warn':'ok'}"><b style="font-family:var(--f-display);font-size:1.08rem">${tb?'ต้องปรับปรุงคำขอ':tw?'ผ่านแบบมีข้อสังเกต':'ผ่าน'}</b><span>สรุปผลเบื้องต้น</span></div>`;
+  $('badge').hidden=!tb;$('badge').textContent=tb;
+}
+
+const findList=(list,emptyMsg)=>list.length?list.map(c=>{const lv=c.iss.some(x=>x.lv==='bad')?'bad':'warn';
+    return `<li>${chip(lv,c.iss.length+' จุด')}<div><b>${esc(c.it.code||'ภาพรวม')}</b> ${esc(c.it.kind==='unit'?unit.name:c.it.title)}<span class="cell">แถว ${c.it.row}</span><ul>${c.iss.map(x=>`<li class="${x.lv}">${esc(x.t)}${data.col[x.field]?`<span class="cell">${data.col[x.field]}${c.it.row}</span>`:''}</li>`).join('')}</ul></div></li>`}).join(''):(emptyMsg?`<li class="empty" style="display:block">${emptyMsg}</li>`:'');
+function renderBudget(){
+  const B=res.budget,cnt={bad:0,warn:0};res.bud.forEach(c=>c.iss.forEach(x=>cnt[x.lv]++));
+  const d=B.planTotal-B.frame;
+  $('frame-table').innerHTML=`<thead><tr><th>รายการ</th><th class="r">จำนวนเงิน (บาท)</th><th>หมายเหตุ</th></tr></thead><tbody>
+    <tr><td>กรอบงบประมาณที่ สกสว. แจ้ง</td><td class="r num">${B.frame?fmt(B.frame):'–'}</td><td class="sub">${esc(B.frameSrc)}${B.researchFrame!==null&&!S.opt.frame?` · วิจัยฯ ${fmt(B.researchFrame)}${B.strengthFrame!==null?' + เสริมสร้างฯ '+fmt(B.strengthFrame):''}`:''}</td></tr>
+    <tr><td>งบรวมทุกแผนงาน (รวมแผนเสริมสร้างฯ)</td><td class="r num">${fmt(B.planTotal)}</td><td class="sub">วิจัยฯ ${fmt(B.researchTotal)} + เสริมสร้างฯ ${fmt(B.strengthTotal)}</td></tr>
+    <tr><td><b>ผลต่าง</b></td><td class="r num">${B.frame?fmt(d):'–'}</td><td>${!B.frame?chip('warn','ไม่มีกรอบให้เทียบ'):B.frameOk?chip('ok','เท่ากับกรอบ'):chip('bad',d>0?'เกินกรอบ':'ต่ำกว่ากรอบ')}</td></tr></tbody>`;
+  $('plan-table').innerHTML='<thead><tr><th>รหัส</th><th>แผนงาน</th><th class="c">โครงการ</th><th class="r">งบแผนงาน</th><th class="r">ผลรวมงบโครงการ</th><th class="r">ผลต่าง</th><th>ผล</th></tr></thead><tbody>'+
+    B.plans.map(x=>`<tr class="k-${x.p.kind}"><td class="num">${esc(x.p.code)}</td><td>${esc(x.p.title)}</td><td class="c num">${x.n||'–'}</td><td class="r num">${fmt(x.Y)}</td><td class="r num">${x.n?fmt(x.childSum):'–'}</td><td class="r num">${x.n?fmt(x.Y-x.childSum):'–'}</td><td>${!x.n?chip('info','ไม่มีโครงการย่อย'):x.ok?chip('ok','ตรงกัน'):chip('bad','ไม่ตรง')}</td></tr>`).join('')+'</tbody>';
+  $('bud-list').innerHTML=findList(res.bud,'');
+  $('bud-chip').innerHTML=cnt.bad?chip('bad',cnt.bad+' จุดต้องแก้'):cnt.warn?chip('warn',cnt.warn+' จุดควรทบทวน'):chip('ok','ยอดถูกต้อง');
+  return cnt;
+}
+function renderExp(){
+  const cnt={bad:0,warn:0},E=res.exp;
+  if(!E){$('exp-chip').innerHTML=chip('info','ยังไม่ได้ตรวจ');$('exp-body').innerHTML='<p class="note">อัปโหลด "ไฟล์รายการค่าใช้จ่าย" ในกล่องที่ 2 ด้านบน เพื่อตรวจการจัดหมวด อัตราค่าใช้จ่ายตามคู่มือ FF บทที่ 2 และยอดรวมรายการเทียบกับงบเสนอขอ</p>';return cnt}
+  E.findings.forEach(f=>cnt[f.lv]++);E.recon.forEach(r=>{if(!r.ok)cnt[r.lv]++});if(E.orphans.length)cnt.warn++;
+  const CN=FFE.CATNAME;
+  let h=`<p class="note">ตรวจ ${E.count} รายการ เทียบงบรายหมวดในไฟล์ตรวจคำขอ แล้วตรวจการจัดหมวดและอัตราตามคู่มือการจัดทำคำของบประมาณ FF บทที่ 2</p>`;
+  h+='<div class="tablebox"><table><thead><tr><th>รหัส</th><th>โครงการ / แผนงาน</th><th class="c">รายการ</th><th class="r">งบเสนอขอ</th><th class="r">รวมรายการ</th><th>หมวดที่ไม่ตรง (คำขอ / รายการ)</th><th>ผล</th></tr></thead><tbody>'+
+    E.recon.map(r=>`<tr class="k-${r.t.kind}"><td class="num">${esc(r.t.code)}</td><td>${esc(r.t.title)}</td><td class="c num">${r.n}</td><td class="r num">${fmt(r.total)}</td><td class="r num">${r.n?fmt(r.itemsTotal):'–'}</td><td class="sub">${r.n?r.rows.filter(x=>!x.ok).map(x=>`${x.l}: ${fmt(x.file)} / ${fmt(x.items)}`).join('<br>')||'–':'–'}</td><td>${r.ok?chip('ok','ตรงกัน'):r.missing?chip('warn','ไม่มีรายการ'):chip('bad','ไม่ตรง')}</td></tr>`).join('')+'</tbody></table></div>';
+  if(E.orphans.length)h+=`<p class="err" style="margin:0">พบรายการของรหัสที่ไม่มีในไฟล์ตรวจคำขอ: ${E.orphans.map(esc).join(', ')}</p>`;
+  if(E.otherYear.length)h+=`<p class="note">${E.otherYear.map(o=>o.none?`${o.t.code}: ไม่มีรายการของปีที่ ${o.exp} (ใช้ทุกรายการแทน)`:`${o.t.code}: มีรายการของปีอื่น ${o.n} รายการ ไม่นำมาคำนวณ`).join(' · ')}</p>`;
+  const groups=new Map();E.findings.forEach(f=>{if(!groups.has(f.t))groups.set(f.t,[]);groups.get(f.t).push(f)});
+  h+='<ul class="findings">'+(groups.size?[...groups].map(([t,fs])=>{const lv=fs.some(f=>f.lv==='bad')?'bad':'warn';
+    return `<li>${chip(lv,fs.length+' รายการ')}<div><b>${esc(t.code)}</b> ${esc(t.title)}<ul>${fs.map(f=>`<li class="${f.lv}"><b>${esc(f.x.detail||f.x.sub||'(ไม่ระบุรายละเอียด)')}</b> <span class="sub">หมวด${esc(f.x.cat)}${f.to?` <span class="arrow">→ ${esc(CN[f.to])}</span>`:''} · ${fmt(f.x.qty)} ${esc(f.x.uom)} × ${fmt(f.x.price)} บาท = ${fmt(f.x.amount)} บาท${f.x.itemId?' · รหัสรายการ '+esc(f.x.itemId):''}</span><br>${esc(f.msg)} <span class="cell">${esc(f.ref)}</span></li>`).join('')}</ul></div></li>`}).join(''):'<li class="empty" style="display:block">ไม่พบรายการที่ผิดหมวดหรือเกินอัตรา</li>')+'</ul>';
+  $('exp-body').innerHTML=h;
+  $('exp-chip').innerHTML=cnt.bad?chip('bad',cnt.bad+' จุดต้องแก้'):cnt.warn?chip('warn',cnt.warn+' จุดควรทบทวน'):chip('ok','ถูกต้อง');
+  return cnt;
+}
+
+/* fill-back: rows aligned to the source sheet */
+function fillRows(){
+  const all=[unit.unitRow,...unit.items].filter(Boolean),first=Math.min(...all.map(i=>i.row)),last=Math.max(...all.map(i=>i.row));
+  const byRow=new Map(all.map(i=>[i.row,i]));const out=[];
+  for(let r=first;r<=last;r++){const it=byRow.get(r);const m=it&&res.mis.find(x=>x.p===it);const c=it&&res.comp.find(x=>x.it===it);
+    const notes=[];if(m&&m.lv!=='ok')notes.push(m.why);
+    res.dup.forEach(d=>{if(!it)return;if(d.kind==='pair'&&(d.a===it||d.b===it))notes.push(`คล้ายโครงการ ${(d.a===it?d.b:d.a).code} (${d.s.toFixed(2)})`);if(d.kind==='prior'&&d.a===it)notes.push('คล้ายโครงการเดิม: '+d.q);if(d.kind==='external'&&d.a===it)notes.push('ยื่นแหล่งทุนอื่น: '+d.txt)});
+    if(c)c.iss.forEach(x=>notes.push(x.t));
+    const b=it&&res.bud.find(x=>x.it===it);if(b)b.iss.forEach(x=>notes.push(x.t));
+    if(it&&res.exp){const rc=res.exp.recon.find(x=>x.t===it);if(rc&&!rc.ok)notes.push(rc.missing?'ไม่มีรายการค่าใช้จ่ายในไฟล์รายการ':'รายการค่าใช้จ่ายรวมไม่ตรงกับงบเสนอขอ/งบรายหมวด');
+      res.exp.findings.filter(f=>f.t===it).forEach(f=>notes.push(`[${f.x.itemId||f.x.detail}] ${f.msg}`))}
+    out.push({r,it,m,S:m?m.S:'',T:m?m.T:'',U:m?m.U:'',notes:notes.join(' / ')});}
+  return{first,out};
+}
+function renderFill(){
+  const {first,out}=fillRows(),c=data.col;
+  $('hint-stu').textContent=c.S?`วางที่เซลล์ ${c.S}${first} (คอลัมน์ ${c.S}:${c.U})`:'';
+  $('hint-notes').textContent=`วางในคอลัมน์หมายเหตุที่ต้องการ เริ่มแถว ${first}`;
+  $('fill-table').innerHTML='<thead><tr><th>แถว</th><th>รหัส</th><th>ชื่อ</th><th class="c">2.4 พันธกิจ</th><th class="c">2.5 ม.17(2)</th><th class="c">2.6 ซ้ำซ้อน</th><th>หมายเหตุและข้อสังเกต</th></tr></thead><tbody>'+
+    out.filter(x=>x.it).map(x=>`<tr class="k-${x.it.kind}"><td class="num">${x.r}</td><td class="num">${esc(x.it.code)}</td><td class="t">${esc(x.it.kind==='unit'?unit.name:x.it.title)}</td><td class="c"><span class="yn ${x.S}">${x.S}</span></td><td class="c"><span class="yn ${x.T}">${x.T}</span></td><td class="c"><span class="yn ${x.U==='Y'?'N':''}">${x.U}</span></td><td>${esc(x.notes)}</td></tr>`).join('')+'</tbody>';
+}
+const tsv=s=>/[\t\n"]/.test(s)?'"'+String(s).replace(/"/g,'""')+'"':s;
+$('btn-copy-stu').addEventListener('click',()=>copyText(fillRows().out.map(x=>[x.S,x.T,x.U].join('\t')).join('\n')));
+$('btn-copy-notes').addEventListener('click',()=>copyText(fillRows().out.map(x=>tsv(x.notes)).join('\n')));
+
+/* file loading */
+function readFile(f){
+  if(typeof XLSX==='undefined'){$('err').textContent='โหลดตัวอ่าน Excel ไม่สำเร็จ ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่';$('err').hidden=false;return}
+  if(!/\.(xlsx|xlsm|xls)$/i.test(f.name)){$('err').textContent='รองรับเฉพาะไฟล์ Excel (.xlsx .xlsm .xls)';$('err').hidden=false;return}
+  $('up-status').innerHTML='กำลังอ่านไฟล์ <b>'+esc(f.name)+'</b> …';
+  const rd=new FileReader();
+  rd.onerror=()=>{$('err').textContent='อ่านไฟล์ไม่สำเร็จ ลองเลือกไฟล์ใหม่อีกครั้ง';$('err').hidden=false};
+  rd.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      let rows=null,irows=null;
+      for(const n of wb.SheetNames){
+        const ws=wb.Sheets[n];if(!ws['!ref'])continue;
+        const rg=XLSX.utils.decode_range(ws['!ref']);
+        const j=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true,blankrows:true});
+        const pad=Array(rg.s.c).fill('');
+        const rr=Array.from({length:rg.s.r},()=>[]).concat(j.map(r=>pad.concat(r)));
+        const has=t=>rr.slice(0,40).some(r=>r.some(c=>String(c).trim().startsWith(t)));
+        if(!rows&&has('รหัสแผนงาน/โครงการ'))rows=rr;
+        else if(!irows&&has('งบประมาณของรายการ')&&has('รหัสโครงการ'))irows=rr;
+      }
+      if(rows){S.rows=rows;S.fileName=f.name;S.unitIdx=0;S.opt.fy='';save();load();toast('อ่านไฟล์ตรวจคำขอ '+f.name+' แล้ว')}
+      else if(irows){FFE.parseItems(irows);S.itemRows=irows;S.itemsFile=f.name;save();loadItems();if(data)run();toast('อ่านไฟล์รายการค่าใช้จ่าย '+f.name+' แล้ว')}
+      else throw new Error('ไม่พบชีตที่มีหัวตาราง "รหัสแผนงาน/โครงการ" หรือ "งบประมาณของรายการ" ในไฟล์นี้');
+    }catch(err){$('err').textContent='อ่านไฟล์ไม่สำเร็จ: '+err.message;$('err').hidden=false;if(data)$('up-status').innerHTML='ยังใช้ไฟล์เดิม <b>'+esc(S.fileName)+'</b>'}
+  };
+  rd.readAsArrayBuffer(f);
+}
+['file','file2'].forEach(id=>$(id).addEventListener('change',e=>{[...e.target.files].forEach(readFile);e.target.value=''}));
+['dragover','dragenter'].forEach(t=>document.addEventListener(t,e=>{e.preventDefault();$('drop').classList.add('over')}));
+document.addEventListener('dragleave',()=>$('drop').classList.remove('over'));
+document.addEventListener('drop',e=>{e.preventDefault();$('drop').classList.remove('over');[...e.dataTransfer.files].forEach(readFile)});
+
+/* options */
+$('u-select').addEventListener('change',e=>{S.unitIdx=+e.target.value;save();letterEdited=false;run()});
+[['o-fy','fy'],['o-deadline','deadline'],['o-frame','frame'],['o-mission','mission'],['o-prior','prior']].forEach(([id,k])=>$(id).addEventListener('input',e=>{S.opt[k]=e.target.value;save();run()}));
+$('o-incl').addEventListener('change',e=>{S.opt.includeStrength=e.target.checked;save();run()});
+$('letter').addEventListener('input',()=>{letterEdited=true});
+$('btn-regen').addEventListener('click',()=>{letterEdited=false;$('letter').value=FFE.letter(unit,res,{fy:S.opt.fy,deadline:S.opt.deadline});toast('สร้างร่างใหม่แล้ว')});
+$('btn-copy').addEventListener('click',()=>copyText($('letter').value,$('letter')));
+$('btn-clear').addEventListener('click',e=>{const b=e.currentTarget;
+  if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='กดอีกครั้งเพื่อยืนยัน';setTimeout(()=>{b.dataset.c='';b.textContent='ล้างข้อมูล'},3000);return}
+  b.dataset.c='';b.textContent='ล้างข้อมูล';S=BLANK();save();load();toast('ล้างข้อมูลแล้ว')});
+
+/* ---------- export: editable Word / Excel files ---------- */
+function tally(){
+  const t={};const cnt=list=>{const o={bad:0,warn:0};list.forEach(c=>c.iss.forEach(x=>o[x.lv]++));return o};
+  t.mis={bad:res.mis.filter(m=>m.lv==='bad').length,warn:res.mis.filter(m=>m.lv==='warn').length};
+  const db=res.dup.filter(d=>d.lv==='bad').length;t.dup={bad:db,warn:res.dup.length-db};
+  t.rule={bad:res.R.filter(x=>x.fail).length,warn:0};
+  t.bud=cnt(res.bud);
+  t.exp={bad:0,warn:0};if(res.exp){res.exp.findings.forEach(f=>t.exp[f.lv]++);res.exp.recon.forEach(r=>{if(!r.ok)t.exp[r.lv]++});if(res.exp.orphans.length)t.exp.warn++}
+  t.comp=cnt(res.comp);
+  t.bad=Object.values(t).reduce((s,x)=>s+x.bad,0);t.warn=Object.values(t).filter(x=>x&&x.warn!==undefined).reduce((s,x)=>s+x.warn,0);
+  t.verdict=t.bad?'ต้องปรับปรุงคำขอ':t.warn?'ผ่านแบบมีข้อสังเกต':'ผ่าน';
+  return t;
+}
+const CHECKS=[['mis','1. เป็นโครงการวิจัยและพัฒนานวัตกรรมตามพันธกิจ'],['dup','2. ความซ้ำซ้อนของโครงการ'],['rule','3. สัดส่วนงบประมาณตามเกณฑ์ กสว.'],['bud','4. ยอดงบแผนงาน โครงการ และกรอบงบประมาณ'],['exp','5. หมวดและอัตราค่าใช้จ่ายรายรายการ'],['comp','6. ความครบถ้วนและถูกต้องของข้อมูล']];
+const LVTH={bad:'ต้องแก้ไข',warn:'ควรทบทวน',ok:'ผ่าน',info:'ข้อมูล'};
+const thaiDate=()=>new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+const fileStamp=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()+543}${p(d.getMonth()+1)}${p(d.getDate())}`};
+const safeName=s=>String(s).replace(/[\\/:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim().slice(0,80);
+const baseName=kind=>safeName(`${kind}_FF${String(S.opt.fy||'').slice(-2)}_${unit.name}_${fileStamp()}`);
+const itemName=it=>it.kind==='unit'?unit.name:it.title;
+
+async function saveFile(name,blob){
+  try{
+    if(window.claude&&typeof window.claude.use==='function'){
+      const dl=await window.claude.use('downloads');
+      if(dl){
+        try{await dl.save({filename:name,data:blob});toast('บันทึกไฟล์ '+name+' แล้ว')}
+        catch(e){toast(e&&e.code==='declined'?'ยกเลิกการบันทึกไฟล์':'บันทึกไฟล์ไม่สำเร็จ'+(e&&e.message?': '+e.message:''))}
+        return;
+      }
+    }
+  }catch(e){}
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);toast('ดาวน์โหลด '+name);
+}
+function needLib(ok,what){if(ok)return true;toast('โหลดตัวสร้างไฟล์ '+what+' ไม่สำเร็จ ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วโหลดหน้าใหม่');return false}
+async function busy(btn,fn){if(btn.disabled)return;const t=btn.textContent;btn.disabled=true;btn.textContent='กำลังสร้างไฟล์…';try{await fn()}catch(e){console.error(e);toast('สร้างไฟล์ไม่สำเร็จ: '+(e&&e.message||e))}finally{btn.disabled=false;btn.textContent=t}}
+
+/* ----- shared row builders (used by both Word and Excel) ----- */
+function rowsMission(){return res.mis.map(m=>[m.p.code,m.p.title,m.mk.join(', ')||'–',m.rd.length,LVTH[m.lv],m.why,m.S,m.T])}
+function rowsDup(){return res.dup.map(d=>{
+  const lv=LVTH[d.lv];
+  if(d.kind==='pair')return[lv,'คู่โครงการคล้ายกัน',d.a.code,d.a.title,d.b.code,d.b.title,+d.s.toFixed(2),d.sameLead?'หัวหน้าโครงการคนเดียวกัน':''];
+  if(d.kind==='prior')return[lv,'คล้ายโครงการเดิม',d.a.code,d.a.title,'',d.q,+d.s.toFixed(2),''];
+  if(d.kind==='external')return[lv,'ยื่นแหล่งทุนอื่น',d.a.code,d.a.title,'','', '',d.txt];
+  return[lv,'ภาระหัวหน้าโครงการ','',d.lead,'',d.ps.map(p=>p.code).join(', '),'',`เป็นหัวหน้า ${d.ps.length} โครงการ`]})}
+function rowsRule(){return res.R.map(x=>[x.no,x.label,Math.round(x.amt),+pct(x.share),x.txt,Math.round(x.cap),x.fail?'เกินเกณฑ์':'ผ่าน',x.fail?x.cut:'',x.fail?'':Math.round(x.headroom)])}
+function rowsPlans(){return res.budget.plans.map(x=>[x.p.code,x.p.title,x.p.kind==='strength'?'แผนเสริมสร้างฯ':'แผนงานวิจัยฯ',x.n||'',Math.round(x.Y),x.n?Math.round(x.childSum):'',x.n?Math.round(x.Y-x.childSum):'',!x.n?'ไม่มีโครงการย่อย':x.ok?'ตรงกัน':'ไม่ตรง'])}
+function rowsIssues(list){const out=[];list.forEach(c=>c.iss.forEach(x=>out.push([c.it.row,c.it.code||'ภาพรวม',itemName(c.it),LVTH[x.lv],x.t,data.col[x.field]?data.col[x.field]+c.it.row:''])));return out}
+function rowsRecon(){return res.exp?res.exp.recon.map(r=>[r.t.code,r.t.title,r.n,Math.round(r.total),r.n?Math.round(r.itemsTotal):'',r.rows.filter(x=>!x.ok&&r.n).map(x=>`${x.l}: ${fmt(x.file)} / ${fmt(x.items)}`).join('; '),r.ok?'ตรงกัน':r.missing?'ไม่มีรายการ':'ไม่ตรง']):[]}
+function rowsItems(){return res.exp?res.exp.findings.map(f=>[f.t.code,f.t.title,f.x.itemId,f.x.cat,f.x.sub,f.x.detail,f.x.qty,f.x.uom,f.x.price,f.x.amount,LVTH[f.lv],f.to?FFE.CATNAME[f.to]:'',f.msg,f.ref]):[]}
+
+/* ----- Excel ----- */
+function sheet(aoa,widths){const ws=XLSX.utils.aoa_to_sheet(aoa);if(widths)ws['!cols']=widths.map(w=>({wch:w}));return ws}
+function headerBlock(title){
+  return[[title],['หน่วยงาน',unit.name],['กระทรวง',unit.ministry||''],['ปีงบประมาณ',S.opt.fy||''],['ไฟล์ตรวจคำขอ',S.fileName||''],['ไฟล์รายการค่าใช้จ่าย',S.itemsFile||'(ไม่ได้อัปโหลด)'],['วันที่ตรวจ',thaiDate()],[]];
+}
+function fillAoa(){
+  const {out}=fillRows();
+  return[['แถวในไฟล์ต้นฉบับ','รหัส','ประเภท','ชื่อแผนงาน/โครงการ','2.4 สอดคล้องพันธกิจ','2.5 สอดคล้องมาตรา 17(2)','2.6 ซ้ำซ้อน','หมายเหตุและข้อสังเกต'],
+    ...out.map(x=>[x.r,x.it?x.it.code:'',x.it?KIND[x.it.kind]:'',x.it?itemName(x.it):'',x.S,x.T,x.U,x.notes])];
+}
+const FILLW=[10,12,14,60,12,12,10,90];
+function exportResultsXlsx(){
+  if(!needLib(typeof XLSX!=='undefined','Excel'))return;
+  const t=tally(),wb=XLSX.utils.book_new(),B=res.budget;
+  XLSX.utils.book_append_sheet(wb,sheet([...headerBlock('รายงานผลการตรวจคำของบประมาณ Fundamental Fund'),
+    ['งบเสนอขอรวม (บาท)',Math.round(res.T)],['จำนวนแผนงาน / โครงการ',`${res.plans.length} / ${res.projects.length}`],['ประเด็นที่ต้องแก้ไข',t.bad],['ประเด็นที่ควรทบทวน',t.warn],['สรุปผลเบื้องต้น',t.verdict],[],
+    ['ด้านที่ตรวจ','ต้องแก้ไข','ควรทบทวน'],...CHECKS.map(([k,l])=>[l+(k==='exp'&&!res.exp?' (ไม่ได้ตรวจ)':''),t[k].bad,t[k].warn])],[34,70,14]),'สรุป');
+  XLSX.utils.book_append_sheet(wb,sheet([['รหัส','ชื่อโครงการ','คำพันธกิจที่พบ','จำนวนคำบ่งชี้วิจัย','ผล','เหตุผล','เสนอ 2.4','เสนอ 2.5'],...rowsMission()],[12,60,24,10,12,60,9,9]),'1-พันธกิจ');
+  XLSX.utils.book_append_sheet(wb,sheet([['ระดับ','ประเภท','รหัส','ชื่อโครงการ','รหัสที่คล้าย','ชื่อโครงการที่คล้าย / รายการ','ค่าความคล้าย','หมายเหตุ'],...(res.dup.length?rowsDup():[['ไม่พบโครงการที่มีลักษณะซ้ำซ้อน']])],[12,18,12,50,12,50,10,30]),'2-ซ้ำซ้อน');
+  XLSX.utils.book_append_sheet(wb,sheet([[`งบเสนอขอรวม (ตัวหาร) ${fmt(res.T)} บาท = งบแผนงานวิจัยฯ ${fmt(res.researchTotal)}${res.inclS?' + แผนเสริมสร้างฯ '+fmt(res.strengthTotal):''}`],[],
+    ['ข้อ','หมวด','ยอดเสนอขอ (บาท)','ร้อยละ','เกณฑ์','เพดาน (บาท)','ผล','ต้องลดอย่างน้อย (บาท)','คงเหลือถึงเพดาน (บาท)'],...rowsRule()],[6,38,16,9,44,16,11,18,18]),'3-สัดส่วนงบ');
+  XLSX.utils.book_append_sheet(wb,sheet([['รายการ','จำนวนเงิน (บาท)','หมายเหตุ'],['กรอบงบประมาณที่ สกสว. แจ้ง',B.frame?Math.round(B.frame):'',B.frameSrc],['งบรวมทุกแผนงาน (รวมแผนเสริมสร้างฯ)',Math.round(B.planTotal),`วิจัยฯ ${fmt(B.researchTotal)} + เสริมสร้างฯ ${fmt(B.strengthTotal)}`],['ผลต่าง',B.frame?Math.round(B.planTotal-B.frame):'',!B.frame?'ไม่มีกรอบให้เทียบ':B.frameOk?'เท่ากับกรอบ':'ไม่เท่ากับกรอบ'],[],
+    ['รหัส','แผนงาน','ประเภท','จำนวนโครงการ','งบแผนงาน (บาท)','ผลรวมงบโครงการ (บาท)','ผลต่าง (บาท)','ผล'],...rowsPlans(),[],
+    ['แถวในไฟล์','รหัส','ชื่อ','ระดับ','ข้อสังเกต','เซลล์'],...(res.bud.length?rowsIssues(res.bud):[['','','','','ยอดงบประมาณถูกต้อง']])],[36,50,40,14,18,20,16,16]),'4-ยอดงบและกรอบ');
+  XLSX.utils.book_append_sheet(wb,sheet(res.exp?[['รหัส','โครงการ / แผนงาน','จำนวนรายการ','งบเสนอขอ (บาท)','รวมรายการ (บาท)','หมวดที่ไม่ตรง (คำขอ / รายการ)','ผล'],...rowsRecon(),[],
+    ['รหัสโครงการ','ชื่อโครงการ','รหัสรายการ','หมวด','หมวดย่อย','รายละเอียด','จำนวน','หน่วยนับ','ราคาต่อหน่วย','งบของรายการ','ระดับ','ควรอยู่หมวด','ข้อสังเกต','อ้างอิงคู่มือ FF บทที่ 2'],...(res.exp.findings.length?rowsItems():[['ไม่พบรายการที่ผิดหมวดหรือเกินอัตรา']])]
+    :[['ไม่ได้อัปโหลดไฟล์รายการค่าใช้จ่าย จึงไม่ได้ตรวจด้านนี้']],[12,44,12,16,30,50,10,10,12,14,12,16,70,22]),'5-หมวดค่าใช้จ่าย');
+  XLSX.utils.book_append_sheet(wb,sheet([['แถวในไฟล์','รหัส','ชื่อ','ระดับ','ข้อสังเกต','เซลล์'],...(res.comp.length?rowsIssues(res.comp):[['','','','','ข้อมูลครบถ้วนและถูกต้อง']])],[10,12,56,12,90,8]),'6-ความครบถ้วน');
+  XLSX.utils.book_append_sheet(wb,sheet(fillAoa(),FILLW),'กรอกกลับชีต');
+  const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  return saveFile(baseName('ผลการตรวจ')+'.xlsx',new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+}
+function exportFillXlsx(){
+  if(!needLib(typeof XLSX!=='undefined','Excel'))return;
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,sheet(fillAoa(),FILLW),'กรอกกลับชีต');
+  const c=data.col;
+  XLSX.utils.book_append_sheet(wb,sheet([['วิธีใช้'],[`1. คอลัมน์ "แถวในไฟล์ต้นฉบับ" ตรงกับเลขแถวในชีตตรวจคำขอ (${S.fileName||''})`],[`2. คัดลอกคอลัมน์ 2.4–2.6 ไปวางที่เซลล์ ${c.S||'S'}${fillRows().first} ของชีตต้นฉบับ (คอลัมน์ ${c.S||'S'}:${c.U||'U'})`],['3. ค่า Y/N เป็นข้อเสนอจากระบบ ผู้ตรวจควรทบทวนก่อนวาง'],['4. คอลัมน์หมายเหตุใช้วางในคอลัมน์ข้อสังเกตที่ต้องการ']],[100]),'วิธีใช้');
+  const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  return saveFile(baseName('กรอกกลับชีต')+'.xlsx',new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+}
+
+/* ----- Word ----- */
+const WFONT='TH Sarabun New';
+function W(){
+  const D=window.docx;
+  const font={ascii:WFONT,hAnsi:WFONT,cs:WFONT,eastAsia:WFONT};
+  const run=(t,o={})=>new D.TextRun({text:String(t??''),font,size:o.size||32,sizeComplexScript:o.size||32,bold:!!o.bold,boldComplexScript:!!o.bold,color:o.color});
+  const para=(t,o={})=>new D.Paragraph({children:Array.isArray(t)?t:[run(t,o)],alignment:o.center?D.AlignmentType.CENTER:D.AlignmentType.LEFT,indent:o.indent?{left:o.indent,hanging:o.hanging||0}:undefined,spacing:{after:o.after??60,before:o.before||0},keepNext:!!o.keepNext});
+  const TW=9332;
+  const cell=(t,o={})=>new D.TableCell({children:String(t??'').split('\n').map(l=>para(l,{size:26,bold:o.head,after:0})),shading:o.head?{fill:'E7EEF8',type:D.ShadingType.CLEAR,color:'auto'}:undefined,margins:{top:40,bottom:40,left:80,right:80},width:o.w?{size:o.w,type:D.WidthType.DXA}:undefined});
+  const table=(head,rows,pcts)=>{const widths=pcts?pcts.map(x=>Math.round(TW*x/100)):head.map(()=>Math.round(TW/head.length));return new D.Table({width:{size:TW,type:D.WidthType.DXA},columnWidths:widths,layout:D.TableLayoutType.FIXED,rows:[new D.TableRow({tableHeader:true,children:head.map((h,i)=>cell(h,{head:true,w:widths[i]}))}),...rows.map(r=>new D.TableRow({cantSplit:true,children:r.map((c,i)=>cell(typeof c==='number'?fmt(c):c,{w:widths[i]}))}))]})};
+  const doc=children=>new D.Document({creator:'ระบบตรวจคำของบประมาณ FF',title:'FF',styles:{default:{document:{run:{font,size:32,sizeComplexScript:32}}}},
+    sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1440,bottom:1134,left:1440,right:1134}}},children}]});
+  return{D,run,para,table,doc};
+}
+async function exportReportDocx(){
+  if(!needLib(window.docx,'Word'))return;
+  const {D,run,para,table,doc}=W(),t=tally(),B=res.budget,K=[];
+  const h=(txt)=>K.push(para(txt,{bold:true,size:34,before:200,after:80,keepNext:true}));
+  const note=(txt)=>K.push(para(txt,{size:28,color:'5A6878'}));
+  const empty=(txt)=>K.push(para(txt,{size:30}));
+  K.push(para('รายงานผลการตรวจคำของบประมาณ',{bold:true,size:40,center:true,after:0}));
+  K.push(para(`กองทุนส่งเสริม ววน. ด้านการสนับสนุนงานมูลฐาน (Fundamental Fund) ปีงบประมาณ พ.ศ. ${S.opt.fy||'....'}`,{bold:true,size:34,center:true,after:200}));
+  [['หน่วยงาน',unit.name+(unit.ministry?' ('+unit.ministry+')':'')],['ไฟล์ตรวจคำขอ',S.fileName||'-'],['ไฟล์รายการค่าใช้จ่าย',S.itemsFile||'ไม่ได้อัปโหลด'],['วันที่ตรวจ',thaiDate()]].forEach(([a,b])=>K.push(para([run(a+': ',{bold:true}),run(b)],{after:20})));
+  h('สรุปผลการตรวจ');
+  K.push(para([run('งบเสนอขอรวม ',{bold:true}),run(`${fmt(res.T)} บาท · ${res.plans.length} แผนงาน ${res.projects.length} โครงการ`)],{after:20}));
+  K.push(para([run('ผลเบื้องต้น ',{bold:true}),run(`${t.verdict} (ต้องแก้ไข ${t.bad} ประเด็น ควรทบทวน ${t.warn} ประเด็น)`)],{after:100}));
+  K.push(table(['ด้านที่ตรวจ','ต้องแก้ไข','ควรทบทวน'],CHECKS.map(([k,l])=>[l+(k==='exp'&&!res.exp?' (ไม่ได้ตรวจ)':''),String(t[k].bad),String(t[k].warn)]),[70,15,15]));
+  h(CHECKS[0][1]);
+  K.push(table(['รหัส','โครงการ','คำพันธกิจที่พบ','ผล','เหตุผล'],res.mis.map(m=>[m.p.code,m.p.title,m.mk.join(', ')||'–',LVTH[m.lv],m.why]),[13,33,15,10,29]));
+  note('คัดกรองจากคำในชื่อ วัตถุประสงค์ ผลผลิต และคำสำคัญ ผู้ตรวจควรอ่านยืนยันรายการ "ควรทบทวน" และ "ต้องแก้ไข" ก่อนแจ้งหน่วยงาน');
+  h(CHECKS[1][1]);
+  if(res.dup.length)K.push(table(['ระดับ','ประเด็น','รายละเอียด'],res.dup.map(d=>[LVTH[d.lv],d.kind==='pair'?'คู่โครงการคล้ายกัน':d.kind==='prior'?'คล้ายโครงการเดิม':d.kind==='external'?'ยื่นแหล่งทุนอื่น':'ภาระหัวหน้าโครงการ',
+    d.kind==='pair'?`${d.a.code} ${d.a.title}\n${d.b.code} ${d.b.title}\nค่าความคล้าย ${d.s.toFixed(2)}${d.sameLead?' · หัวหน้าโครงการคนเดียวกัน':''}`:d.kind==='prior'?`${d.a.code} ${d.a.title}\nคล้าย: ${d.q} (${d.s.toFixed(2)})`:d.kind==='external'?`${d.a.code} ${d.a.title}\n${d.txt}`:`${d.lead} เป็นหัวหน้า ${d.ps.length} โครงการ (${d.ps.map(p=>p.code).join(', ')})`]),[14,22,64]));
+  else empty('ไม่พบโครงการที่มีลักษณะซ้ำซ้อนภายในหน่วยงาน');
+  h(CHECKS[2][1]);
+  note(`ตัวหาร: งบเสนอขอรวม ${fmt(res.T)} บาท (งบแผนงานวิจัยฯ ${fmt(res.researchTotal)}${res.inclS?' + แผนเสริมสร้างฯ '+fmt(res.strengthTotal):''})`);
+  K.push(table(['หมวด','ยอด (บาท)','ร้อยละ','เกณฑ์','ผล','ต้องลด (บาท)'],res.R.map(x=>[`${x.no}. ${x.label}`,fmt(x.amt),pct(x.share),x.txt,x.fail?'เกินเกณฑ์':'ผ่าน',x.fail?fmt(x.cut):'–']),[26,15,9,26,11,13]));
+  h(CHECKS[3][1]);
+  K.push(table(['รายการ','จำนวนเงิน (บาท)','หมายเหตุ'],[['กรอบงบประมาณที่ สกสว. แจ้ง',B.frame?fmt(B.frame):'–',B.frameSrc],['งบรวมทุกแผนงาน (รวมแผนเสริมสร้างฯ)',fmt(B.planTotal),`วิจัยฯ ${fmt(B.researchTotal)} + เสริมสร้างฯ ${fmt(B.strengthTotal)}`],['ผลต่าง',B.frame?fmt(B.planTotal-B.frame):'–',!B.frame?'ไม่มีกรอบให้เทียบ':B.frameOk?'เท่ากับกรอบ':'ไม่เท่ากับกรอบ']],[40,20,40]));
+  K.push(para('',{after:60}));
+  K.push(table(['รหัส','แผนงาน','งบแผนงาน','ผลรวมโครงการ','ผล'],res.budget.plans.map(x=>[x.p.code,x.p.title,fmt(x.Y),x.n?fmt(x.childSum):'–',!x.n?'ไม่มีโครงการย่อย':x.ok?'ตรงกัน':'ไม่ตรง']),[12,44,15,15,14]));
+  if(res.bud.length){K.push(para('',{after:60}));K.push(table(['รหัส','ข้อสังเกต'],res.bud.map(c=>[c.it.code||'ภาพรวม',c.iss.map(x=>`[${LVTH[x.lv]}] ${x.t}`).join('\n')]),[14,86]))}
+  h(CHECKS[4][1]);
+  if(!res.exp)empty('ไม่ได้อัปโหลดไฟล์รายการค่าใช้จ่าย จึงไม่ได้ตรวจด้านนี้');
+  else{
+    note(`ตรวจ ${res.exp.count} รายการ อ้างอิงคู่มือการจัดทำคำของบประมาณ FF บทที่ 2`);
+    const bad=res.exp.recon.filter(r=>!r.ok);
+    if(bad.length)K.push(table(['รหัส','งบเสนอขอ','รวมรายการ','ประเด็น'],bad.map(r=>[r.t.code,fmt(r.total),r.n?fmt(r.itemsTotal):'–',r.missing?'ไม่มีรายการค่าใช้จ่าย':r.rows.filter(x=>!x.ok).map(x=>`${x.l}: ${fmt(x.file)} / ${fmt(x.items)}`).join('\n')||'ยอดรวมไม่ตรง']),[14,18,18,50]));
+    if(res.exp.findings.length){K.push(para('',{after:60}));K.push(table(['โครงการ','รายการ','ข้อสังเกต'],res.exp.findings.map(f=>[f.t.code,`${f.x.detail||f.x.sub||'-'}\nหมวด${f.x.cat}${f.to?' → '+FFE.CATNAME[f.to]:''} · ${fmt(f.x.amount)} บาท${f.x.itemId?'\nรหัสรายการ '+f.x.itemId:''}`,`[${LVTH[f.lv]}] ${f.msg}\n(${f.ref})`]),[13,37,50]))}
+    else empty('ไม่พบรายการที่ผิดหมวดหรือเกินอัตรา');
+  }
+  h(CHECKS[5][1]);
+  if(res.comp.length)K.push(table(['รหัส','ชื่อ','ข้อสังเกต'],res.comp.map(c=>[c.it.code||'ภาพรวม',itemName(c.it),c.iss.map(x=>`[${LVTH[x.lv]}] ${x.t}`).join('\n')]),[13,29,58]));
+  else empty('ข้อมูลครบถ้วนและถูกต้อง');
+  K.push(para('',{after:120}));
+  note('รายงานนี้สร้างจากระบบตรวจคำของบประมาณ FF เป็นผลการคัดกรองเบื้องต้นเพื่อประกอบการพิจารณาของผู้ตรวจ ไม่ใช่ผลการพิจารณาอย่างเป็นทางการ');
+  const blob=await D.Packer.toBlob(doc(K));
+  return saveFile(baseName('รายงานผลการตรวจ')+'.docx',blob);
+}
+async function exportLetterDocx(){
+  if(!needLib(window.docx,'Word'))return;
+  const {D,para,doc}=W();
+  const lines=$('letter').value.replace(/\r/g,'').split('\n'),K=[];
+  lines.forEach((ln,i)=>{
+    const lead=(ln.match(/^ */)||[''])[0].length,txt=ln.trim();
+    if(!txt){K.push(para('',{after:0}));return}
+    if(i===0){K.push(para(txt,{bold:true,size:36,center:true,after:120}));return}
+    const top=/^\d+\.\s/.test(txt)&&lead===0;
+    const sub=/^\d+\.\d+\s/.test(txt);
+    const bullet=/^-\s/.test(txt);
+    const indent=lead?Math.min(Math.round(lead/3),4)*567:0;
+    K.push(para(txt,{bold:top,indent:sub||bullet?indent+567:indent,hanging:sub||bullet?567:0,after:top?40:60,keepNext:top}));
+  });
+  const blob=await D.Packer.toBlob(doc(K));
+  return saveFile(baseName('ร่างข้อสังเกต')+'.docx',blob);
+}
+[['x-report-docx',exportReportDocx],['x-report-xlsx',exportResultsXlsx],['x-fill-xlsx',exportFillXlsx],['x-letter-docx',exportLetterDocx],['x-letter-docx2',exportLetterDocx],['x-fill-xlsx2',exportFillXlsx]]
+  .forEach(([id,fn])=>{const b=$(id);if(b)b.addEventListener('click',()=>{if(data&&res)busy(b,fn)})});
+
+/* tabs */
+let curTab='tab-result';try{curTab=localStorage.getItem(KEY+'-tab')||curTab}catch(e){}
+function showTab(){document.querySelectorAll('#tabs button').forEach(x=>{const on=x.id===curTab;x.setAttribute('aria-selected',on);$(x.dataset.panel).hidden=!on||!data})}
+document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>{curTab=b.id;try{localStorage.setItem(KEY+'-tab',curTab)}catch(e){}showTab()}));
+load();
+</script>
+
+</body></html>
